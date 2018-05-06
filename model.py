@@ -42,6 +42,12 @@ def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
 
 '''
 
+out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
+unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
+chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
+predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+
+
 def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTraining):
     """Builds a convolutional model with low compute requirements.
 
@@ -145,7 +151,6 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
         final_fc_input = second_fc
 
 
-    #label_count = label_count
     final_fc_weights = tf.Variable(
             tf.truncated_normal(
                 [second_fc_output_channels, label_count], stddev=0.01))
@@ -153,6 +158,47 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
     final_fc = tf.matmul(final_fc_input, final_fc_weights) + final_fc_bias
 
     return final_fc
+
+
+def inference(ncep,max_len,label_count,isTraining):
+    with tf.Session() as session:
+
+
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+        logits = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len=max_len,label_count=label_count,isTraining=isTraining)
+
+        saver = tf.train.Saver()
+        checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
+
+        chk_path = checkpoint.model_checkpoint_path
+        saver.restore(session,chk_path)
+
+        npInputs = np.load(predict_dir + 'numpy_batch_1.npy')
+        #npLabels = np.load(predict_dir + 'numpy_batch_labels_1.npy'),
+
+        npInputs2 = np.reshape(npInputs, [-1, max_len * ncep])
+
+        predictions = session.run(
+            [
+                logits
+            ],
+            feed_dict={
+                fingerprint_input: npInputs2,
+                dropout_prob: 1.0,
+            })
+
+        print(predictions[0])
+        print(tf.nn.softmax(predictions[0]).eval())
+        predicted_indices = tf.argmax(predictions[0],axis=1)
+
+        print(predicted_indices.eval())
+
+        return predicted_indices
+
+
+
 
 
 def train(ncep,max_len,label_count,isTraining,batch_count):
@@ -201,15 +247,13 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
         global_step = tf.train.get_or_create_global_step()
         increment_global_step = tf.assign(global_step, global_step + 1)
 
-        #saver = tf.train.Saver(tf.global_variables())
 
+        # For checkpoints
+        saver = tf.train.Saver(tf.global_variables())
 
         init = tf.global_variables_initializer()
         sess.run(init)
 
-        out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
-
-        unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
 
 
         for i in range(1,epochs + 1):
@@ -245,6 +289,11 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
             print('epoch:' + str(i))
             print ('Confusion Matrix:' + '\n' +  str(total_conf_matrix))
 
+            # Save after every 10 epochs
+            if (i % 10 == 0):
+                print('Saving checkpoint')
+                saver.save(sess=sess,save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt',global_step = i )
+
             # Validation set reporting
             npValInputs = np.load(unk_test + 'numpy_batch_12.npy')
             npValInputs = np.reshape(npValInputs, [-1, max_len * ncep])
@@ -265,7 +314,9 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
 
 
 def main():
-    train(ncep=26,max_len=99,label_count=3,isTraining=True,batch_count=6193)
+
+    #train(ncep=26,max_len=99,label_count=3,isTraining=True,batch_count=6193)
+    inference(ncep=26,max_len=99,label_count=3,isTraining=False)
 
 
 if __name__ == '__main__':

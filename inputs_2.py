@@ -38,8 +38,12 @@ def main():
     test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
     test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
 
+    predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+    predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+
     #create_numpy_batches(train_files,out_numpy,ncep)
-    create_numpy_batches(test_files, test_out_numpy, ncep)
+    #create_numpy_batches(test_files, test_out_numpy, ncep)
+    create_numpy_batches(predict, predict_out, ncep)
 
 
 
@@ -52,6 +56,7 @@ def create_numpy_batches(file_dir,out_dir,ncep):
     labels = []
     os.chdir(file_dir)
     for file in glob.glob("*.wav"):
+        print(file)
         fs,signal = wav.read(file_dir + file)
         mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep = ncep)
 
