@@ -42,7 +42,7 @@ def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
 
 '''
 
-def build_graph_session(ncep,max_len, label_count):
+def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTraining):
     """Builds a convolutional model with low compute requirements.
 
     This is roughly the network labeled as 'cnn-one-fstride4' in the
@@ -88,70 +88,84 @@ def build_graph_session(ncep,max_len, label_count):
         placeholder.
     """
 
-    check_nans = False
-    epochs = 200
+    input_frequency_size = ncep
+    input_time_size = max_len
 
-    graph = tf.Graph()
-    with graph.as_default():
+    fingerprint_4d = tf.reshape(fingerprint_input,
+                                    [-1, input_time_size, input_frequency_size, 1])
+    first_filter_width = 8
+    first_filter_height = input_time_size
+    first_filter_count = 186
+    first_filter_stride_x = 1
+    first_filter_stride_y = 1
+    first_weights = tf.Variable(
+            tf.truncated_normal(
+                [first_filter_height, first_filter_width, 1, first_filter_count],
+                stddev=0.01))
+    first_bias = tf.Variable(tf.zeros([first_filter_count]))
+    first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [1, first_filter_stride_y, first_filter_stride_x, 1], 'VALID') + first_bias
+    first_relu = tf.nn.relu(first_conv)
 
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-        input_frequency_size = ncep
-        input_time_size = max_len
-        fingerprint_input = tf.placeholder(dtype = tf.float32,shape=[None,input_time_size * input_frequency_size],name = "fingerprint_input")
-        fingerprint_4d = tf.reshape(fingerprint_input,
-                                      [-1, input_time_size, input_frequency_size, 1])
-        first_filter_width = 8
-        first_filter_height = input_time_size
-        first_filter_count = 186
-        first_filter_stride_x = 1
-        first_filter_stride_y = 1
-        first_weights = tf.Variable(
-              tf.truncated_normal(
-                  [first_filter_height, first_filter_width, 1, first_filter_count],
-                  stddev=0.01))
-        first_bias = tf.Variable(tf.zeros([first_filter_count]))
-        first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [
-              1, first_filter_stride_y, first_filter_stride_x, 1
-        ], 'VALID') + first_bias
-        first_relu = tf.nn.relu(first_conv)
-
+    if isTraining:
         first_dropout = tf.nn.dropout(first_relu, dropout_prob)
+    else:
+        first_dropout = first_relu
 
-        first_conv_output_width = math.floor(
-              (input_frequency_size - first_filter_width + first_filter_stride_x) /
-              first_filter_stride_x)
-        first_conv_output_height = math.floor(
-              (input_time_size - first_filter_height + first_filter_stride_y) /
-              first_filter_stride_y)
-        first_conv_element_count = int(
-              first_conv_output_width * first_conv_output_height * first_filter_count)
-        flattened_first_conv = tf.reshape(first_dropout,
-                                            [-1, first_conv_element_count])
-        first_fc_output_channels = 128
-        first_fc_weights = tf.Variable(
-              tf.truncated_normal(
-                  [first_conv_element_count, first_fc_output_channels], stddev=0.01))
-        first_fc_bias = tf.Variable(tf.zeros([first_fc_output_channels]))
-        first_fc = tf.matmul(flattened_first_conv, first_fc_weights) + first_fc_bias
+    first_conv_output_width = math.floor(
+            (input_frequency_size - first_filter_width + first_filter_stride_x) /
+            first_filter_stride_x)
+    first_conv_output_height = math.floor(
+            (input_time_size - first_filter_height + first_filter_stride_y) /
+            first_filter_stride_y)
+    first_conv_element_count = int(
+            first_conv_output_width * first_conv_output_height * first_filter_count)
+    flattened_first_conv = tf.reshape(first_dropout,[-1, first_conv_element_count])
+    first_fc_output_channels = 128
+    first_fc_weights = tf.Variable(
+            tf.truncated_normal(
+                [first_conv_element_count, first_fc_output_channels], stddev=0.01))
+    first_fc_bias = tf.Variable(tf.zeros([first_fc_output_channels]))
+    first_fc = tf.matmul(flattened_first_conv, first_fc_weights) + first_fc_bias
 
+    if isTraining:
         second_fc_input = tf.nn.dropout(first_fc, dropout_prob)
+    else:
+        second_fc_input = first_fc
 
-        second_fc_output_channels = 128
-        second_fc_weights = tf.Variable(
-              tf.truncated_normal(
-                  [first_fc_output_channels, second_fc_output_channels], stddev=0.01))
-        second_fc_bias = tf.Variable(tf.zeros([second_fc_output_channels]))
-        second_fc = tf.matmul(second_fc_input, second_fc_weights) + second_fc_bias
+    second_fc_output_channels = 128
+    second_fc_weights = tf.Variable(
+            tf.truncated_normal(
+                [first_fc_output_channels, second_fc_output_channels], stddev=0.01))
+    second_fc_bias = tf.Variable(tf.zeros([second_fc_output_channels]))
+    second_fc = tf.matmul(second_fc_input, second_fc_weights) + second_fc_bias
 
+    if isTraining:
         final_fc_input = tf.nn.dropout(second_fc, dropout_prob)
+    else:
+        final_fc_input = second_fc
 
 
-        #label_count = label_count
-        final_fc_weights = tf.Variable(
-              tf.truncated_normal(
-                  [second_fc_output_channels, label_count], stddev=0.01))
-        final_fc_bias = tf.Variable(tf.zeros([label_count]))
-        final_fc = tf.matmul(final_fc_input, final_fc_weights) + final_fc_bias
+    #label_count = label_count
+    final_fc_weights = tf.Variable(
+            tf.truncated_normal(
+                [second_fc_output_channels, label_count], stddev=0.01))
+    final_fc_bias = tf.Variable(tf.zeros([label_count]))
+    final_fc = tf.matmul(final_fc_input, final_fc_weights) + final_fc_bias
+
+    return final_fc
+
+
+def train(ncep,max_len,label_count,isTraining,batch_count):
+
+        check_nans = False
+        epochs = 100
+
+        sess = tf.InteractiveSession()
+
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+        final_fc = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len = max_len,label_count=label_count,isTraining=isTraining)
 
         # Define loss and optimizer
         ground_truth_input = tf.placeholder(
@@ -187,8 +201,8 @@ def build_graph_session(ncep,max_len, label_count):
         global_step = tf.train.get_or_create_global_step()
         increment_global_step = tf.assign(global_step, global_step + 1)
 
-        saver = tf.train.Saver(tf.global_variables())
-        sess = tf.Session()
+        #saver = tf.train.Saver(tf.global_variables())
+
 
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -202,20 +216,18 @@ def build_graph_session(ncep,max_len, label_count):
 
             total_conf_matrix = None
 
-            for j in range(100,4167,100):
-                #print('epoch:' + str(i) + " batch:" + str(j))
+            for j in range(100,batch_count,100):
+
 
                 npInputs = np.load(out_numpy + 'numpy_batch' + '_' + str(j) + '.npy')
                 npLabels = np.load(out_numpy + 'numpy_batch_labels' + '_' + str(j) + '.npy'),
 
                 npInputs2 = np.reshape(npInputs,[-1,max_len * ncep])
-                #print (npInputs2.shape)
-                #print(npLabels[0].shape)
 
 
-                train_summary, train_accuracy, cross_entropy_value,_,conf_matrix = sess.run(
+                xent_mean, _,_,conf_matrix = sess.run(
                     [
-                        evaluation_step, cross_entropy_mean, train_step,
+                        cross_entropy_mean, train_step,
                         increment_global_step,confusion_matrix
                     ],
                     feed_dict={
@@ -230,37 +242,14 @@ def build_graph_session(ncep,max_len, label_count):
                 else:
                     total_conf_matrix += conf_matrix
 
-
-
             print('epoch:' + str(i))
-            print ('Total Conf Matrix:' + str(total_conf_matrix))
+            print ('Confusion Matrix:' + '\n' +  str(total_conf_matrix))
 
-            '''
-            # Validate after end of single epoch
-            npValInputs = np.load(yes_test + 'numpy_batch_1.npy')
-            npValLabels = np.load(yes_test + 'numpy_batch_labels_1.npy')
-
-            npValInputs = np.reshape(npValInputs,[-1,max_len * ncep])
-
-            #print(npValInputs.shape)
-            #print(npValLabels.shape)
-
-            test_accuracy, conf_matrix, pred_indices = sess.run(
-                [evaluation_step, confusion_matrix,predicted_indices],
-                feed_dict={
-                    fingerprint_input: npValInputs,
-                    ground_truth_input: npValLabels,
-                    dropout_prob: 1.0
-                })
-
-            print('Predicted Index: ' + str(pred_indices))
-            print ('Actual is:' + 'Yes')
-            
-            '''
-            npValInputs = np.load(unk_test + 'numpy_batch_8.npy')
+            # Validation set reporting
+            npValInputs = np.load(unk_test + 'numpy_batch_12.npy')
             npValInputs = np.reshape(npValInputs, [-1, max_len * ncep])
 
-            npValLabels = np.load(unk_test + 'numpy_batch_labels_8.npy')
+            npValLabels = np.load(unk_test + 'numpy_batch_labels_12.npy')
             test_accuracy, conf_matrix, pred_indices = sess.run(
                 [evaluation_step, confusion_matrix, predicted_indices],
                 feed_dict={
@@ -276,7 +265,7 @@ def build_graph_session(ncep,max_len, label_count):
 
 
 def main():
-    build_graph_session(ncep=26,max_len=99,label_count=2)
+    train(ncep=26,max_len=99,label_count=3,isTraining=True,batch_count=6193)
 
 
 if __name__ == '__main__':

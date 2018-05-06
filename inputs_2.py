@@ -7,6 +7,7 @@ import python_speech_features as pspeech
 import numpy as np
 
 
+NO = 2
 YES = 1
 UNK = 0
 
@@ -36,7 +37,8 @@ def main():
 
     test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
     test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
-    create_numpy_batches(train_files,out_numpy,ncep)
+
+    #create_numpy_batches(train_files,out_numpy,ncep)
     create_numpy_batches(test_files, test_out_numpy, ncep)
 
 
@@ -44,7 +46,7 @@ def main():
 def create_numpy_batches(file_dir,out_dir,ncep):
 
     max, count = get_max(file_dir)
-    #print (max)
+    print (max)
     i = 0
     inputs = []
     labels = []
@@ -61,7 +63,8 @@ def create_numpy_batches(file_dir,out_dir,ncep):
 
         if (file.__contains__('yes')):
             labels.append(YES)
-
+        elif (file.__contains__('no_')):
+            labels.append(NO)
         else:
             labels.append(UNK)
 
