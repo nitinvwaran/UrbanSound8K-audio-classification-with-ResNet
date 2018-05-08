@@ -2,50 +2,7 @@
 import math
 import tensorflow as tf
 import numpy as np
-
-'''
-def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
-                           window_size_ms, window_stride_ms,
-                           dct_coefficient_count):
-  """Calculates common settings needed for all models.
-
-  Args:
-    label_count: How many classes are to be recognized.
-    sample_rate: Number of audio samples per second.
-    clip_duration_ms: Length of each audio clip to be analyzed.
-    window_size_ms: Duration of frequency analysis window.
-    window_stride_ms: How far to move in time between frequency windows.
-    dct_coefficient_count: Number of frequency bins to use for analysis.
-
-  Returns:
-    Dictionary containing common settings.
-  """
-  desired_samples = int(sample_rate * clip_duration_ms / 1000)
-  window_size_samples = int(sample_rate * window_size_ms / 1000)
-  window_stride_samples = int(sample_rate * window_stride_ms / 1000)
-  length_minus_window = (desired_samples - window_size_samples)
-  if length_minus_window < 0:
-    spectrogram_length = 0
-  else:
-    spectrogram_length = 1 + int(length_minus_window / window_stride_samples)
-  fingerprint_size = dct_coefficient_count * spectrogram_length
-  return {
-      'desired_samples': desired_samples,
-      'window_size_samples': window_size_samples,
-      'window_stride_samples': window_stride_samples,
-      'spectrogram_length': spectrogram_length,
-      'dct_coefficient_count': dct_coefficient_count,
-      'fingerprint_size': fingerprint_size,
-      'label_count': label_count,
-      'sample_rate': sample_rate,
-  }
-
-'''
-
-out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
-unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
-chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
-predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+import habits.inputs_2 as inp
 
 
 def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTraining):
@@ -160,9 +117,12 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
     return final_fc
 
 
-def inference(ncep,max_len,label_count,isTraining):
+def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
+
     with tf.Session() as session:
 
+        max_len = 99
+        ncep = 26
 
         fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
@@ -175,33 +135,31 @@ def inference(ncep,max_len,label_count,isTraining):
         chk_path = checkpoint.model_checkpoint_path
         saver.restore(session,chk_path)
 
-        npInputs = np.load(predict_dir + 'numpy_batch_8.npy')
-        #npLabels = np.load(predict_dir + 'numpy_batch_labels_1.npy'),
-
-        npInputs2 = np.reshape(npInputs, [-1, max_len * ncep])
+        #npInputs = np.load(predict_dir + 'numpy_batch_8.npy')
 
         predictions = session.run(
             [
                 logits
             ],
             feed_dict={
-                fingerprint_input: npInputs2,
+                fingerprint_input: nparr,
                 dropout_prob: 1.0,
             })
 
-        print(predictions[0])
-        print(tf.nn.softmax(predictions[0]).eval())
+        #print(predictions[0])
+        #print(tf.nn.softmax(predictions[0]).eval())
         predicted_indices = tf.argmax(predictions[0],axis=1)
 
-        print(predicted_indices.eval())
 
-        return predicted_indices
-
-
-
+        return predicted_indices.eval()
 
 
 def train(ncep,max_len,label_count,isTraining,batch_count):
+
+        out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
+        unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
+        chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
+        predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
         check_nans = False
         epochs = 100
@@ -311,65 +269,39 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
             print('Actual is:' + str(npValLabels.tolist()))
 
 
-
-
-def main():
+def main(file_dir,file,label,label_count,chkpoint_dir):
 
     #train(ncep=26,max_len=99,label_count=2,isTraining=True,batch_count=7700)
-    inference(ncep=26,max_len=99,label_count=2,isTraining=False)
+    result = invoke_inference(file_dir=file_dir, label= label, file=file, label_count=label_count, chkpoint_dir=chkpoint_dir)
+
+    return result[0]
 
 
-if __name__ == '__main__':
-    if __name__ == '__main__':
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            '--sample_rate',
-            type=int,
-            default=16000,
-            help='Expected sample rate of the wavs', )
-        parser.add_argument(
-            '--clip_duration_ms',
-            type=int,
-            default=1000,
-            help='Expected duration in milliseconds of the wavs', )
-        parser.add_argument(
-            '--clip_stride_ms',
-            type=int,
-            default=30,
-            help='How often to run recognition. Useful for models with cache.', )
-        parser.add_argument(
-            '--window_size_ms',
-            type=float,
-            default=30.0,
-            help='How long each spectrogram timeslice is', )
-        parser.add_argument(
-            '--window_stride_ms',
-            type=float,
-            default=10.0,
-            help='How long the stride is between spectrogram timeslices', )
-        parser.add_argument(
-            '--dct_coefficient_count',
-            type=int,
-            default=40,
-            help='How many bins to use for the MFCC fingerprint', )
-        parser.add_argument(
-            '--start_checkpoint',
-            type=str,
-            default='',
-            help='If specified, restore this pretrained model before any training.')
-        parser.add_argument(
-            '--model_architecture',
-            type=str,
-            default='conv',
-            help='What model architecture to use')
-        parser.add_argument(
-            '--wanted_words',
-            type=str,
-            default='yes,no,up,down,left,right,on,off,stop,go',
-            help='Words to use (others will be added to an unknown label)', )
-        parser.add_argument(
-            '--output_file', type=str, help='Where to save the frozen graph.')
-        FLAGS, unparsed = parser.parse_known_args()
-        tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+def invoke_inference(file_dir,file,label,label_count,chkpoint_dir):
+    # hardcode max_len as used for training
+    ncep = 26,
+    max_len = 99
+    isTraining = False
 
+    #nparray prep
+    nparr1 = inp.prepare_file_inference(file_dir = file_dir,file_name = file)
+    nparr1 = np.expand_dims(nparr1,axis=0)
+    nparr1 = np.reshape(nparr1,[-1,nparr1.shape[1] * nparr1.shape[2]])
 
+    #Do inference
+    result = inference(ncep=ncep, max_len=max_len, label_count=label_count, isTraining=isTraining,nparr= nparr1,chkpoint_dir = chkpoint_dir)
+
+    return result
+
+if (__name__ == '__main__'):
+
+    file_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+    chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
+
+    file = 'yes_c137814b_nohash_0.wav'
+    #file = 'achoo_4.wav'
+    label = ''
+    label_count = 2
+
+    result = main(file_dir=file_dir,file=file,label=label,label_count=label_count,chkpoint_dir=chkpoint_dir)
+    print ('The Result is:' + str(result))

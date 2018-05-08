@@ -46,6 +46,23 @@ def main():
     create_numpy_batches(predict, predict_out, ncep)
 
 
+def prepare_file_inference(file_dir,file_name):
+    ncep = 26
+    max = 99
+
+    fs,signal = wav.read(file_dir + file_name)
+    mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep=ncep)
+
+    # truncate to maxlen of 99 used for training
+    if(mfcc.shape[0] > 99):
+        mfcc = mfcc[:99,:]
+
+    padding = ((0, max - mfcc.shape[0]), (0, 0))
+    nparr2 = np.pad(mfcc, pad_width=padding, mode='constant', constant_values=0)
+    #nparr2 = np.expand_dims(nparr2,axis=0)
+
+    return nparr2
+
 
 def create_numpy_batches(file_dir,out_dir,ncep):
 
