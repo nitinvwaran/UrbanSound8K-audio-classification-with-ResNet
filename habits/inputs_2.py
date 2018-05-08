@@ -7,7 +7,7 @@ import python_speech_features as pspeech
 import numpy as np
 
 
-NO = 2
+
 YES = 1
 UNK = 0
 
@@ -49,7 +49,10 @@ def main():
 
 def create_numpy_batches(file_dir,out_dir,ncep):
 
-    max, count = get_max(file_dir)
+    n, count = get_max(file_dir)
+
+    max = 99
+    print (n)
     print (max)
     i = 0
     inputs = []
@@ -60,6 +63,10 @@ def create_numpy_batches(file_dir,out_dir,ncep):
         fs,signal = wav.read(file_dir + file)
         mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep = ncep)
 
+        if (mfcc.shape[0] > 99):
+            mfcc = mfcc[:99,:]
+
+
         padding = ((0, max - mfcc.shape[0]), (0, 0))
         nparr2 = np.pad(mfcc, pad_width=padding, mode='constant', constant_values=0)
 
@@ -68,8 +75,6 @@ def create_numpy_batches(file_dir,out_dir,ncep):
 
         if (file.__contains__('yes')):
             labels.append(YES)
-        elif (file.__contains__('no_')):
-            labels.append(NO)
         else:
             labels.append(UNK)
 

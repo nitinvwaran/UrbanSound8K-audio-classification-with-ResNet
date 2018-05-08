@@ -175,7 +175,7 @@ def inference(ncep,max_len,label_count,isTraining):
         chk_path = checkpoint.model_checkpoint_path
         saver.restore(session,chk_path)
 
-        npInputs = np.load(predict_dir + 'numpy_batch_1.npy')
+        npInputs = np.load(predict_dir + 'numpy_batch_8.npy')
         #npLabels = np.load(predict_dir + 'numpy_batch_labels_1.npy'),
 
         npInputs2 = np.reshape(npInputs, [-1, max_len * ncep])
@@ -315,11 +315,61 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
 
 def main():
 
-    #train(ncep=26,max_len=99,label_count=3,isTraining=True,batch_count=6193)
-    inference(ncep=26,max_len=99,label_count=3,isTraining=False)
+    #train(ncep=26,max_len=99,label_count=2,isTraining=True,batch_count=7700)
+    inference(ncep=26,max_len=99,label_count=2,isTraining=False)
 
 
 if __name__ == '__main__':
-    main()
+    if __name__ == '__main__':
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            '--sample_rate',
+            type=int,
+            default=16000,
+            help='Expected sample rate of the wavs', )
+        parser.add_argument(
+            '--clip_duration_ms',
+            type=int,
+            default=1000,
+            help='Expected duration in milliseconds of the wavs', )
+        parser.add_argument(
+            '--clip_stride_ms',
+            type=int,
+            default=30,
+            help='How often to run recognition. Useful for models with cache.', )
+        parser.add_argument(
+            '--window_size_ms',
+            type=float,
+            default=30.0,
+            help='How long each spectrogram timeslice is', )
+        parser.add_argument(
+            '--window_stride_ms',
+            type=float,
+            default=10.0,
+            help='How long the stride is between spectrogram timeslices', )
+        parser.add_argument(
+            '--dct_coefficient_count',
+            type=int,
+            default=40,
+            help='How many bins to use for the MFCC fingerprint', )
+        parser.add_argument(
+            '--start_checkpoint',
+            type=str,
+            default='',
+            help='If specified, restore this pretrained model before any training.')
+        parser.add_argument(
+            '--model_architecture',
+            type=str,
+            default='conv',
+            help='What model architecture to use')
+        parser.add_argument(
+            '--wanted_words',
+            type=str,
+            default='yes,no,up,down,left,right,on,off,stop,go',
+            help='Words to use (others will be added to an unknown label)', )
+        parser.add_argument(
+            '--output_file', type=str, help='Where to save the frozen graph.')
+        FLAGS, unparsed = parser.parse_known_args()
+        tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
 
 
