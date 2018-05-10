@@ -7,7 +7,7 @@ import python_speech_features as pspeech
 import numpy as np
 
 
-
+HOUSE = 2
 YES = 1
 UNK = 0
 
@@ -41,8 +41,8 @@ def main():
     predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
-    #create_numpy_batches(train_files,out_numpy,ncep)
-    #create_numpy_batches(test_files, test_out_numpy, ncep)
+    create_numpy_batches(train_files,out_numpy,ncep)
+    create_numpy_batches(test_files, test_out_numpy, ncep)
     create_numpy_batches(predict, predict_out, ncep)
 
 
@@ -92,6 +92,8 @@ def create_numpy_batches(file_dir,out_dir,ncep):
 
         if (file.__contains__('yes')):
             labels.append(YES)
+        elif (file.__contains__('house')):
+            labels.append(HOUSE)
         else:
             labels.append(UNK)
 

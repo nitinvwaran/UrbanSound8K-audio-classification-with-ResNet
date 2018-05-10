@@ -8,6 +8,5 @@ setup(name='habits',
       author_email='nitin.vwaran@gmail.com',
       license='MIT',
       packages=['habits'],
-      install_requires=['numpy','python_speech_features','scipy','tensorflow'],
-      scripts=['bin/process_habit'],
+      #install_requires=['numpy','python_speech_features','scipy','tensorflow'],
       zip_safe=False)

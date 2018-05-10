@@ -1,0 +1,10 @@
+setup.py
+habits/__init__.py
+habits/inputs_2.py
+habits/model.py
+habits.egg-info/PKG-INFO
+habits.egg-info/SOURCES.txt
+habits.egg-info/dependency_links.txt
+habits.egg-info/not-zip-safe
+habits.egg-info/requires.txt
+habits.egg-info/top_level.txt
