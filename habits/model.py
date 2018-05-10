@@ -6,8 +6,6 @@ import habits.inputs_2 as inp
 import argparse
 import sys
 import os
-
-from tensorflow.python import pywrap_tensorflow as pyten
 from tensorflow.python.framework import graph_util
 
 
