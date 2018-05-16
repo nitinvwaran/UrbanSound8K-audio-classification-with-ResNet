@@ -3,10 +3,25 @@
   <component name="ChangeListManager">
     <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bin/process_habit.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/checkpoint" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/checkpoint" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.data-00000-of-00001" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.index" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.meta" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/habits/inputs_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/inputs_2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/habits/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/habits/record.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -20,11 +35,13 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/habits/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="120">
-              <caret line="181" column="69" lean-forward="true" selection-start-line="181" selection-start-column="69" selection-end-line="181" selection-end-column="69" />
+            <state relative-caret-position="526">
+              <caret line="344" lean-forward="true" selection-start-line="344" selection-end-line="344" />
               <folding>
                 <element signature="e#1#12#0" expanded="true" />
-                <element signature="e#6157#10835#0" />
+                <element signature="e#6204#6593#0" />
+                <element signature="e#6639#7193#0" />
+                <element signature="e#7280#8324#0" />
               </folding>
             </state>
           </provider>
@@ -42,20 +59,11 @@
       <file leaf-file-name="inputs_2.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="465">
-              <caret line="58" selection-start-line="58" selection-end-line="58" />
+            <state relative-caret-position="840">
+              <caret line="95" column="33" lean-forward="true" selection-start-line="95" selection-start-column="33" selection-end-line="95" selection-end-column="33" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="record.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/habits/record.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="120">
-              <caret line="8" selection-start-line="8" selection-end-line="8" />
             </state>
           </provider>
         </entry>
@@ -80,6 +88,7 @@
       <find>wanted_words_index</find>
       <find>label_count</find>
       <find>argmax</find>
+      <find>unk_test</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -103,10 +112,10 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="24" />
-    <option name="y" value="10" />
-    <option name="width" value="616" />
-    <option name="height" value="470" />
+    <option name="x" value="857" />
+    <option name="y" value="58" />
+    <option name="width" value="1717" />
+    <option name="height" value="971" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -223,15 +232,15 @@
     <frame x="67" y="25" width="1717" height="1095" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.17295033" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.10891682" />
       <window_info anchor="bottom" id="TODO" order="5" />
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32977587" />
-      <window_info anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.24476361" />
+      <window_info anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.23040096" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Python Console" order="8" weight="0.32870865" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.27321237" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.18356457" />
       <window_info anchor="bottom" id="Debug" order="2" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -247,7 +256,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="1" />
+      <option name="time" value="2" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
@@ -257,7 +266,9 @@
           <caret line="157" column="71" selection-start-line="157" selection-start-column="71" selection-end-line="157" selection-end-column="71" />
           <folding>
             <element signature="e#1#12#0" expanded="true" />
-            <element signature="e#6157#10835#0" />
+            <element signature="e#6204#6593#0" />
+            <element signature="e#6639#7193#0" />
+            <element signature="e#7280#8324#0" />
           </folding>
         </state>
       </provider>
@@ -285,7 +296,9 @@
           <caret line="105" column="29" selection-start-line="105" selection-start-column="29" selection-end-line="105" selection-end-column="29" />
           <folding>
             <element signature="e#1#12#0" expanded="true" />
-            <element signature="e#6157#10835#0" />
+            <element signature="e#6204#6593#0" />
+            <element signature="e#6639#7193#0" />
+            <element signature="e#7280#8324#0" />
           </folding>
         </state>
       </provider>
@@ -306,7 +319,9 @@
           <caret line="105" column="29" lean-forward="true" selection-start-line="105" selection-start-column="29" selection-end-line="105" selection-end-column="29" />
           <folding>
             <element signature="e#1#12#0" expanded="true" />
-            <element signature="e#6157#10835#0" />
+            <element signature="e#6204#6593#0" />
+            <element signature="e#6639#7193#0" />
+            <element signature="e#7280#8324#0" />
           </folding>
         </state>
       </provider>
@@ -340,8 +355,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="465">
-          <caret line="58" selection-start-line="58" selection-end-line="58" />
+        <state relative-caret-position="840">
+          <caret line="95" column="33" lean-forward="true" selection-start-line="95" selection-start-column="33" selection-end-line="95" selection-end-column="33" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>
@@ -350,11 +365,13 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="181" column="69" lean-forward="true" selection-start-line="181" selection-start-column="69" selection-end-line="181" selection-end-column="69" />
+        <state relative-caret-position="526">
+          <caret line="344" lean-forward="true" selection-start-line="344" selection-end-line="344" />
           <folding>
             <element signature="e#1#12#0" expanded="true" />
-            <element signature="e#6157#10835#0" />
+            <element signature="e#6204#6593#0" />
+            <element signature="e#6639#7193#0" />
+            <element signature="e#7280#8324#0" />
           </folding>
         </state>
       </provider>

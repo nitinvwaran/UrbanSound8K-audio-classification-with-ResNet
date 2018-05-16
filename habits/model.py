@@ -9,6 +9,34 @@ import os
 from tensorflow.python.framework import graph_util
 
 
+def build_final_layer_graph(label_count,ncep,max_len,isTraining,bottleneck_input):
+
+    '''
+    Builds the final layer, this will need to be retrained with every new label
+    '''
+
+    second_fc_output_channels = 128
+    ground_truth_name = 'ground_truth_retrain_label_' + str(label_count)
+    bottleneck_input_name = 'bottleneck_input_label_' + str(label_count)
+
+    name_scope = 'layer_retrain_labels'
+    with tf.name_scope(name_scope):
+        bottleneck_input = tf.placeholder_with_default(input=bottleneck_input, shape=[None, second_fc_output_channels],name = bottleneck_input_name)
+
+    with tf.variable_scope('layer_four',reuse=tf.AUTO_REUSE):
+        l4b_init = tf.random_normal_initializer(mean=0, stddev=0.0, dtype=tf.float32)
+        l4w_init = tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)
+        final_fc_weights = tf.get_variable(name="weight_four" ,
+                    shape= [second_fc_output_channels, label_count],dtype=tf.float32,initializer=l4w_init)
+        final_fc_bias = tf.get_variable(name="bias_four" , shape=[label_count], dtype=tf.float32,initializer=l4b_init)
+        final_fc = tf.matmul(bottleneck_input, final_fc_weights) + final_fc_bias
+
+    ground_truth_retrain_input = tf.placeholder(dtype=tf.int32, shape=[None], name=ground_truth_name)
+
+    # The final result - a softmax can be applied to this for inference
+    return final_fc, bottleneck_input,ground_truth_retrain_input
+
+
 
 
 
@@ -130,15 +158,10 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
         else:
             final_fc_input = second_fc
 
-    with tf.variable_scope('layer_four',reuse=tf.AUTO_REUSE):
-        l4b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=42, dtype=tf.float32)
-        l4w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=42, dtype=tf.float32)
-        final_fc_weights = tf.get_variable(name="weight_four",
-                    shape= [second_fc_output_channels, label_count],dtype=tf.float32,initializer=l4w_init)
-        final_fc_bias = tf.get_variable(name="bias_four", shape=[label_count], dtype=tf.float32,initializer=l4b_init)
-        final_fc = tf.matmul(final_fc_input, final_fc_weights) + final_fc_bias
 
-    return final_fc
+    return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias # The bottleneck input
+
+
 
 
 
@@ -182,6 +205,9 @@ def load_graph(frozen_graph_filename):
     return graph
 
 
+
+
+
 def save_frozen_graph(chkpoint_dir,max_len,ncep,label_count,isTraining):
 
 
@@ -211,19 +237,28 @@ def save_frozen_graph(chkpoint_dir,max_len,ncep,label_count,isTraining):
         os.path.basename(chkpoint_dir + 'habits_frozen.pb'),
         as_text=False)
 
+
+
 def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
 
 
     fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-    logits = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len=max_len,label_count=label_count,isTraining=isTraining)
+    bottleneck_input, _,_,_,_,_,_= build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len=max_len,label_count=label_count,isTraining=isTraining)
+    logits, _,_ = build_final_layer_graph(label_count = label_count,ncep=ncep,max_len = max_len,isTraining=isTraining,bottleneck_input=bottleneck_input)
 
-    checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
-    chk_path = checkpoint.model_checkpoint_path
 
-    saver = tf.train.Saver(tf.global_variables())
+    #checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
+    #chk_path = checkpoint.model_checkpoint_path
+
+    init = tf.global_variables_initializer()
     sess = tf.Session()
+    sess.run(init)
+
+    #saver = tf.train.Saver(tf.global_variables())
+    saver = tf.train.import_meta_graph(chkpoint_dir + 'model_labels_3.ckpt-100.meta')
+    saver.restore(sess,chkpoint_dir + 'model_labels_3.ckpt-100')
 
     # uncomment below to debug variable names
     # between the graph in memory and the graph from checkpoint file
@@ -237,7 +272,7 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
     #print(var_to_shape_map)
     #print(chk_path)
 
-    saver.restore(sess,chk_path)
+    #saver.restore(sess,chk_path)
     predictions = sess.run(
         [
             logits
@@ -250,23 +285,141 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
     return predictions
 
 
+
+def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
+
+    xferfiles = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
+    train = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
+
+    three_label = '/home/nitin/Desktop/tensorflow_speech_dataset/new_labels/3_labels/'
+
+
+    fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+    dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+    bottleneck_input = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep, max_len=max_len,
+                         label_count=label_count, isTraining=isTraining)
+
+    # checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
+    # chk_path = checkpoint.model_checkpoint_path
+
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    sess.run(init)
+
+    # saver = tf.train.Saver(tf.global_variables())
+    saver = tf.train.import_meta_graph(chkpoint_dir + 'model_labels_2.ckpt-30.meta', clear_devices=True)
+    saver.restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
+
+    # uncomment below to debug variable names
+    # between the graph in memory and the graph from checkpoint file
+    # get_variable method should now reuse variables from memory scope
+    # Variable method was creating new copies and suffixing the numbers to new variables in memory
+
+    # var_name = [v.name for v in tf.global_variables()]
+    # print(var_name)
+    # reader = pyten.NewCheckpointReader(chk_path)
+    # var_to_shape_map = reader.get_variable_to_shape_map()
+    # print(var_to_shape_map)
+    # print(chk_path)
+
+    # saver.restore(sess,chk_path)
+
+    for filename in os.listdir(three_label):
+
+        print ('Creating Bottleneck Inputs for file:' + filename)
+        nparr = inp.prepare_file_inference(three_label,filename)
+
+        nparr2 = np.reshape(nparr, [-1, max_len * ncep])
+
+        bottleneck = sess.run(
+            [
+                bottleneck_input
+            ],
+            feed_dict={
+                fingerprint_input: nparr2,
+                dropout_prob: 1.0,
+            })
+
+        print('Saving Bottleneck Inputs for file:' + filename)
+
+        np.save(xferfiles + 'numpy_bottle_' + filename +  '.npy', bottleneck)
+
+        labels = []
+        if (filename.__contains__('yes')):
+            labels.append(1)
+        else:
+            labels.append(0)
+        print('Saving Bottleneck Label for file:' + filename)
+
+        np.save(xferfiles + 'numpy_bottle_labels_' + filename +  '.npy', np.array(labels))
+
+
+def retrain(ncep,max_len,label_count,isTraining,chkpoint_dir):
+    label_count = 3
+
+    with tf.Graph().as_default() as grap:
+
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+        bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias, second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep,
+                                       max_len=max_len, label_count=label_count, isTraining=isTraining)
+
+        final_fc, bottleneck_input, ground_truth_retrain_input = build_final_layer_graph(label_count=label_count,ncep=ncep,max_len=max_len,isTraining=isTraining,bottleneck_input=bottleneck_tensor)
+
+    with tf.Session(graph=grap) as sess:
+
+        print ('restoring')
+        #saver = tf.train.Saver(tf.global_variables())
+
+        tf.train.Saver({'layer_one/weight_one':first_weights,'layer_one/bias_one':first_bias,'layer_two/weight_two':first_fc_weights,'layer_two/bias_two':first_fc_bias,'layer_three/weight_three':second_fc_weights,'layer_three/bias_three':second_fc_bias}).restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
+        #tf.train.Saver(tf.global_variables()).restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
+
+        init = tf.global_variables_initializer()
+        sess.run(init)
+        print ('restored')
+
+        var_name = [v.name for v in tf.global_variables()]
+        print(var_name)
+
+        varb = grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        print (varb)
+
+        val = [sess.run(v) for v in varb]
+        print(val)
+
+
+
+
+
+    #reader = pyten.NewCheckpointReader(chk_path)
+    #var_to_shape_map = reader.get_variable_to_shape_map()
+    #print(var_to_shape_map)
+    #print(chk_path)
+
+
 def train(ncep,max_len,label_count,isTraining,batch_count):
 
+        do_bottleneck_cache  = True
+
         out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
-        unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
+        unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
         #chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
         chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
         predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
         check_nans = False
-        epochs = 100
+        epochs = 30
 
         sess = tf.InteractiveSession()
 
         fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-        final_fc = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len = max_len,label_count=label_count,isTraining=isTraining)
+        #final_fc = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len = max_len,label_count=label_count,isTraining=isTraining)
+        bottleneck_input = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len = max_len,label_count=label_count,isTraining=isTraining)
+        final_fc,_,_ = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input = bottleneck_input)
 
         # Define loss and optimizer
         ground_truth_input = tf.placeholder(
@@ -304,7 +457,7 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
 
 
         # For checkpoints
-        saver = tf.train.Saver(tf.global_variables())
+        saver = tf.train.Saver()
 
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -348,12 +501,13 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
             if (i % 10 == 0):
                 print('Saving checkpoint')
                 saver.save(sess=sess,save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt',global_step = i )
+                #saver.export_meta_graph(filename=chkpoint_dir  + 'model_labels_' + str(label_count) + '.ckpt-' + str(i) + '.meta')
 
             # Validation set reporting
-            npValInputs = np.load(unk_test + 'numpy_batch_19.npy')
+            npValInputs = np.load(unk_test + 'numpy_batch_29.npy')
             npValInputs = np.reshape(npValInputs, [-1, max_len * ncep])
 
-            npValLabels = np.load(unk_test + 'numpy_batch_labels_19.npy')
+            npValLabels = np.load(unk_test + 'numpy_batch_labels_29.npy')
             test_accuracy, conf_matrix, pred_indices = sess.run(
                 [evaluation_step, confusion_matrix, predicted_indices],
                 feed_dict={
@@ -366,12 +520,12 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
             print('Actual is:' + str(npValLabels.tolist()))
 
 
-def main(_):
+def main(file_dir, file, label, label_count, chkpoint_dir):
 
-    #train(ncep=26,max_len = 99,label_count =3,isTraining=True,batch_count = 6800)
-    result = invoke_inference(file_dir=FLAGS.filedir, label= FLAGS.label, file=FLAGS.file, label_count=FLAGS.labelcount, chkpoint_dir=FLAGS.chkpoint_dir,use_graph=FLAGS.usegraph,ncep=FLAGS.ncep,max_len=FLAGS.maxlen)
-    #result = invoke_inference(file_dir=file_dir, label= label, file=file, label_count=3, chkpoint_dir=chkpoint_dir)
-    return result
+    train(ncep=26,max_len = 99,label_count =2,isTraining=True,batch_count = 12600)
+    #result = invoke_inference(file_dir=FLAGS.filedir, label= FLAGS.label, file=FLAGS.file, label_count=FLAGS.labelcount, chkpoint_dir=FLAGS.chkpoint_dir,use_graph=FLAGS.usegraph,ncep=FLAGS.ncep,max_len=FLAGS.maxlen)
+    #result = invoke_inference(file_dir=file_dir, label= label, file=file, label_count=3, chkpoint_dir=chkpoint_dir,use_graph=0,ncep=26,max_len=99)
+    #return result
 
 
 
@@ -401,7 +555,7 @@ def invoke_inference(file_dir,file,label,label_count,chkpoint_dir,use_graph,ncep
 if __name__  ==   '__main__':
 
 
-    '''
+
     file_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
 
@@ -411,11 +565,14 @@ if __name__  ==   '__main__':
     label_count = 3
     
     #result = main()
-    result = main(file_dir=file_dir, file=file, label=label, label_count=label_count, chkpoint_dir=chkpoint_dir)
-    print('The Result is:' + str(result))
+    #result = main(file_dir=file_dir, file=file, label=label, label_count=label_count, chkpoint_dir=chkpoint_dir)
+    #print('The Result is:' + str(result))
+
+    #create_bottlenecks_cache(ncep=26,max_len = 99,label_count=2,isTraining=False,chkpoint_dir=chkpoint_dir)
+    retrain(ncep=26,max_len=99,label_count=2,isTraining=True,chkpoint_dir=chkpoint_dir)
+
+
     '''
-
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
             '--filedir',
@@ -464,6 +621,7 @@ if __name__  ==   '__main__':
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+    '''
 
 
 

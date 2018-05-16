@@ -5,6 +5,7 @@ import os
 import scipy.io.wavfile as wav
 import python_speech_features as pspeech
 import numpy as np
+import scipy.signal as sig
 
 
 HOUSE = 2
@@ -35,15 +36,15 @@ def main():
     train_files = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
     out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
 
-    test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
-    test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/unk_test/'
+    test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
+    test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
 
     predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
-    create_numpy_batches(train_files,out_numpy,ncep)
+    #create_numpy_batches(train_files,out_numpy,ncep)
     create_numpy_batches(test_files, test_out_numpy, ncep)
-    create_numpy_batches(predict, predict_out, ncep)
+    #create_numpy_batches(predict, predict_out, ncep)
 
 
 def prepare_file_inference(file_dir,file_name):
@@ -52,6 +53,8 @@ def prepare_file_inference(file_dir,file_name):
 
     fs,signal = wav.read(file_dir + file_name)
     mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep=ncep)
+    #f, t, mfcc = sig.spectrogram(signal,fs)
+
 
     # truncate to maxlen of 99 used for training
     if(mfcc.shape[0] > 99):
@@ -62,6 +65,8 @@ def prepare_file_inference(file_dir,file_name):
     #nparr2 = np.expand_dims(nparr2,axis=0)
 
     return nparr2
+
+
 
 
 def create_numpy_batches(file_dir,out_dir,ncep):
@@ -92,8 +97,6 @@ def create_numpy_batches(file_dir,out_dir,ncep):
 
         if (file.__contains__('yes')):
             labels.append(YES)
-        elif (file.__contains__('house')):
-            labels.append(HOUSE)
         else:
             labels.append(UNK)
 
