@@ -42,12 +42,17 @@ def main():
     predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
+    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
+
     #create_numpy_batches(train_files,out_numpy,ncep)
-    create_numpy_batches(test_files, test_out_numpy, ncep)
+    #create_numpy_batches(test_files, test_out_numpy, ncep)
     #create_numpy_batches(predict, predict_out, ncep)
+
+    create_randomized_bottleneck_batches(xferfiles_dir)
 
 
 def prepare_file_inference(file_dir,file_name):
+
     ncep = 26
     max = 99
 
@@ -67,6 +72,40 @@ def prepare_file_inference(file_dir,file_name):
     return nparr2
 
 
+def create_randomized_bottleneck_batches(filedir):
+
+    #TODO: randomize
+
+    filedirout = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_batch/'
+
+    inputs = []
+    labels = []
+
+
+    os.chdir(filedir)
+    i = 1
+    j = 0
+    for file in glob.glob('*.npy'):
+
+        if (file.__contains__('label')):
+            file2 = file.replace('numpy_bottle_labels_','')
+            nparr = np.load(file)
+            labels.append(nparr.tolist())
+
+            input_file = 'numpy_bottle_' + file2
+            nparr2 = np.load(input_file)
+            inputs.append(nparr2.tolist())
+            i = i + 1
+
+        if (i % 100 == 0):
+            j = j + 1
+            print ('creating batch:' + str(j))
+            np.save(filedirout + 'bottleneck_batch_' + str(j * 100) + '.npy',np.asarray(inputs))
+            np.save(filedirout + 'bottleneck_batch_label_' + str(j * 100) + '.npy',np.asarray(labels))
+
+            inputs = []
+            labels = []
+            i = 1
 
 
 def create_numpy_batches(file_dir,out_dir,ncep):

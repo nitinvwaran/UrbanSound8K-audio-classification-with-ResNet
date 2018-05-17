@@ -15,6 +15,7 @@ def build_final_layer_graph(label_count,ncep,max_len,isTraining,bottleneck_input
     Builds the final layer, this will need to be retrained with every new label
     '''
 
+    print ('bottleneck_input shape:' + str(bottleneck_input.shape))
     second_fc_output_channels = 128
     ground_truth_name = 'ground_truth_retrain_label_' + str(label_count)
     bottleneck_input_name = 'bottleneck_input_label_' + str(label_count)
@@ -31,7 +32,7 @@ def build_final_layer_graph(label_count,ncep,max_len,isTraining,bottleneck_input
         final_fc_bias = tf.get_variable(name="bias_four" , shape=[label_count], dtype=tf.float32,initializer=l4b_init)
         final_fc = tf.matmul(bottleneck_input, final_fc_weights) + final_fc_bias
 
-    ground_truth_retrain_input = tf.placeholder(dtype=tf.int32, shape=[None], name=ground_truth_name)
+    ground_truth_retrain_input = tf.placeholder(dtype=tf.int64, shape=[None], name=ground_truth_name)
 
     # The final result - a softmax can be applied to this for inference
     return final_fc, bottleneck_input,ground_truth_retrain_input
@@ -157,6 +158,8 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
             final_fc_input = tf.nn.dropout(second_fc, dropout_prob)
         else:
             final_fc_input = second_fc
+
+        print ('final_fc_input_shape' + str(final_fc_input.shape))
 
 
     return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias # The bottleneck input
@@ -297,8 +300,10 @@ def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
     fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-    bottleneck_input = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep, max_len=max_len,
+    bottleneck_input,_, _, _, _, _, _ = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep, max_len=max_len,
                          label_count=label_count, isTraining=isTraining)
+
+    print ('aiyo:' + str(bottleneck_input.shape))
 
     # checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
     # chk_path = checkpoint.model_checkpoint_path
@@ -325,10 +330,10 @@ def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
 
     # saver.restore(sess,chk_path)
 
-    for filename in os.listdir(three_label):
+    for filename in os.listdir(train):
 
         print ('Creating Bottleneck Inputs for file:' + filename)
-        nparr = inp.prepare_file_inference(three_label,filename)
+        nparr = inp.prepare_file_inference(train,filename)
 
         nparr2 = np.reshape(nparr, [-1, max_len * ncep])
 
@@ -341,14 +346,21 @@ def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
                 dropout_prob: 1.0,
             })
 
+        print ('bottleneck_shape:' + str(np.asarray(bottleneck[0]).shape))
+
         print('Saving Bottleneck Inputs for file:' + filename)
 
         np.save(xferfiles + 'numpy_bottle_' + filename +  '.npy', bottleneck)
 
         labels = []
         if (filename.__contains__('yes')):
+            print ('yes')
             labels.append(1)
+        elif (filename.__contains__('three')):
+            print ('three')
+            labels.append(2)
         else:
+            print ('unk')
             labels.append(0)
         print('Saving Bottleneck Label for file:' + filename)
 
@@ -356,7 +368,9 @@ def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
 
 
 def retrain(ncep,max_len,label_count,isTraining,chkpoint_dir):
+
     label_count = 3
+    check_nans = False
 
     with tf.Graph().as_default() as grap:
 
@@ -366,20 +380,49 @@ def retrain(ncep,max_len,label_count,isTraining,chkpoint_dir):
         bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias, second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep,
                                        max_len=max_len, label_count=label_count, isTraining=isTraining)
 
+        #print(bottleneck_tensor.shape)
+
         final_fc, bottleneck_input, ground_truth_retrain_input = build_final_layer_graph(label_count=label_count,ncep=ncep,max_len=max_len,isTraining=isTraining,bottleneck_input=bottleneck_tensor)
+
+
+        control_dependencies = []
+        if check_nans:
+            checks = tf.add_check_numerics_ops()
+            control_dependencies = [checks]
+
+
+        with tf.name_scope('cross_entropy'):
+            cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
+                labels=ground_truth_retrain_input, logits=final_fc)
+
+        with tf.name_scope('train'), tf.control_dependencies(control_dependencies):
+            learning_rate_input = tf.placeholder(
+                tf.float32, [], name='learning_rate_input')
+            train_step = tf.train.GradientDescentOptimizer(
+                learning_rate_input).minimize(cross_entropy_mean)
+
+        predicted_indices = tf.argmax(final_fc, 1)
+        correct_prediction = tf.equal(predicted_indices, ground_truth_retrain_input)
+        confusion_matrix = tf.confusion_matrix(
+            ground_truth_retrain_input, predicted_indices, num_classes=label_count)
+        evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+
+
 
     with tf.Session(graph=grap) as sess:
 
-        print ('restoring')
-        #saver = tf.train.Saver(tf.global_variables())
+        xferfiles_batch = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_batch/'
 
+        print ('restoring')
         tf.train.Saver({'layer_one/weight_one':first_weights,'layer_one/bias_one':first_bias,'layer_two/weight_two':first_fc_weights,'layer_two/bias_two':first_fc_bias,'layer_three/weight_three':second_fc_weights,'layer_three/bias_three':second_fc_bias}).restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
-        #tf.train.Saver(tf.global_variables()).restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
 
         init = tf.global_variables_initializer()
         sess.run(init)
         print ('restored')
 
+        '''
+        # Check that only part of the graph is restored 
         var_name = [v.name for v in tf.global_variables()]
         print(var_name)
 
@@ -388,12 +431,69 @@ def retrain(ncep,max_len,label_count,isTraining,chkpoint_dir):
 
         val = [sess.run(v) for v in varb]
         print(val)
+        '''
+
+        total_conf_matrix = None
+        batch_count = 14900
+        epochs = 30
+
+        for i in range(1,epochs + 1):
+
+            for j in range(100, batch_count, 100):
+
+                npInputs = np.load(xferfiles_batch + 'bottleneck_batch' + '_' + str(j) + '.npy')
+                npLabels = np.load(xferfiles_batch + 'bottleneck_batch_label' + '_' + str(j) + '.npy')
+
+                print ('bottleneck input shape:' + str(npInputs.shape))
+                print('bottleneck label shape:' + str(npLabels.shape))
+
+                #npInputs2 = np.reshape(npInputs, [-1, max_len * ncep])
+
+                xent_mean, _, conf_matrix = sess.run(
+                    [
+                        cross_entropy_mean, train_step,
+                         confusion_matrix
+                    ],
+                    feed_dict={
+                        #fingerprint_input: None,
+                        bottleneck_input: npInputs,
+                        ground_truth_retrain_input: npLabels,
+                        learning_rate_input: 0.001,
+                        #dropout_prob: None,
+                    })
+
+                if total_conf_matrix is None:
+                    total_conf_matrix = conf_matrix
+                else:
+                    total_conf_matrix += conf_matrix
+
+            print('epoch:' + str(i))
+            print('Confusion Matrix:' + '\n' + str(total_conf_matrix))
+
+        # Save after every 10 epochs
+        #if (i % 10 == 0):
+            # print('Saving checkpoint')
+            # saver.save(sess=sess, save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt', global_step=i)
+            # saver.export_meta_graph(filename=chkpoint_dir  + 'model_labels_' + str(label_count) + '.ckpt-' + str(i) + '.meta')
+
+        # Validation set reporting
+        #npValInputs = np.load(unk_test + 'numpy_batch_29.npy')
+        #npValInputs = np.reshape(npValInputs, [-1, max_len * ncep])
+
+        #npValLabels = np.load(unk_test + 'numpy_batch_labels_29.npy')
+        #test_accuracy, conf_matrix, pred_indices = sess.run(
+        #   [evaluation_step, confusion_matrix, predicted_indices],
+        #    feed_dict={
+        #        fingerprint_input: npValInputs,
+        #        ground_truth_input: npValLabels,
+        #        dropout_prob: 1.0
+        #    })
+
+        #print('Predicted Index: ' + str(pred_indices))
+        #print('Actual is:' + str(npValLabels.tolist()))
 
 
-
-
-
-    #reader = pyten.NewCheckpointReader(chk_path)
+#reader = pyten.NewCheckpointReader(chk_path)
     #var_to_shape_map = reader.get_variable_to_shape_map()
     #print(var_to_shape_map)
     #print(chk_path)
@@ -568,8 +668,9 @@ if __name__  ==   '__main__':
     #result = main(file_dir=file_dir, file=file, label=label, label_count=label_count, chkpoint_dir=chkpoint_dir)
     #print('The Result is:' + str(result))
 
-    #create_bottlenecks_cache(ncep=26,max_len = 99,label_count=2,isTraining=False,chkpoint_dir=chkpoint_dir)
-    retrain(ncep=26,max_len=99,label_count=2,isTraining=True,chkpoint_dir=chkpoint_dir)
+    create_bottlenecks_cache(ncep=26,max_len = 99,label_count=2,isTraining=False,chkpoint_dir=chkpoint_dir)
+    #retrain(ncep=26,max_len=99,label_count=2,isTraining=True,chkpoint_dir=chkpoint_dir)
+    #retrain(ncep=26,max_len=99,label_count=3,isTraining=False,chkpoint_dir=chkpoint_dir)
 
 
     '''

@@ -2,26 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/checkpoints/checkpoint" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/checkpoint" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-100.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-60.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-70.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-80.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/model_labels_3.ckpt-90.meta" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/habits/inputs_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/inputs_2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/habits/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/record.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -35,8 +18,8 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/habits/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="526">
-              <caret line="344" lean-forward="true" selection-start-line="344" selection-end-line="344" />
+            <state relative-caret-position="119">
+              <caret line="329" lean-forward="true" selection-start-line="329" selection-end-line="329" />
               <folding>
                 <element signature="e#1#12#0" expanded="true" />
                 <element signature="e#6204#6593#0" />
@@ -59,8 +42,8 @@
       <file leaf-file-name="inputs_2.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="840">
-              <caret line="95" column="33" lean-forward="true" selection-start-line="95" selection-start-column="33" selection-end-line="95" selection-end-column="33" />
+            <state relative-caret-position="435">
+              <caret line="92" column="41" lean-forward="true" selection-start-line="92" selection-start-column="41" selection-end-line="92" selection-end-column="41" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
@@ -89,6 +72,10 @@
       <find>label_count</find>
       <find>argmax</find>
       <find>unk_test</find>
+      <find>create_bott</find>
+      <find>cache</find>
+      <find>retrain</find>
+      <find>retrain(</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -236,11 +223,11 @@
       <window_info anchor="bottom" id="TODO" order="5" />
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32977587" />
-      <window_info anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.23040096" />
+      <window_info active="true" anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.39377618" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Python Console" order="8" weight="0.32870865" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.18356457" />
+      <window_info anchor="bottom" id="Terminal" order="9" visible="true" weight="0.15581644" />
       <window_info anchor="bottom" id="Debug" order="2" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -355,8 +342,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="840">
-          <caret line="95" column="33" lean-forward="true" selection-start-line="95" selection-start-column="33" selection-end-line="95" selection-end-column="33" />
+        <state relative-caret-position="435">
+          <caret line="92" column="41" lean-forward="true" selection-start-line="92" selection-start-column="41" selection-end-line="92" selection-end-column="41" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>
@@ -365,8 +352,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="526">
-          <caret line="344" lean-forward="true" selection-start-line="344" selection-end-line="344" />
+        <state relative-caret-position="119">
+          <caret line="329" lean-forward="true" selection-start-line="329" selection-end-line="329" />
           <folding>
             <element signature="e#1#12#0" expanded="true" />
             <element signature="e#6204#6593#0" />
