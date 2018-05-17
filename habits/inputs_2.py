@@ -42,7 +42,7 @@ def main():
     predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
-    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
+    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
 
     #create_numpy_batches(train_files,out_numpy,ncep)
     #create_numpy_batches(test_files, test_out_numpy, ncep)
@@ -76,7 +76,7 @@ def create_randomized_bottleneck_batches(filedir):
 
     #TODO: randomize
 
-    filedirout = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_batch/'
+    filedirout = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid_batch/'
 
     inputs = []
     labels = []
@@ -106,6 +106,11 @@ def create_randomized_bottleneck_batches(filedir):
             inputs = []
             labels = []
             i = 1
+
+    print ('Saving validation batch')
+
+    np.save(filedirout + 'bottleneck_batch_valid.npy', np.asarray(inputs))
+    np.save(filedirout + 'bottleneck_batch_label_valid.npy', np.asarray(labels))
 
 
 def create_numpy_batches(file_dir,out_dir,ncep):
