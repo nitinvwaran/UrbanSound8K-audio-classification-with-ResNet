@@ -1,90 +1,84 @@
-import csv
 import glob
 import os
-
 import scipy.io.wavfile as wav
 import python_speech_features as pspeech
 import numpy as np
 import scipy.signal as sig
+import shutil
 
 
-HOUSE = 2
-YES = 1
-UNK = 0
+def get_labels_and_count(label_file):
 
-def get_max(yes_files):
+    print ('label file is ' + label_file)
 
-    i = 0
-    # 99,49
-    max = 0
-    os.chdir(yes_files)
-    for file in glob.glob("*.wav"):
-        fs, signal = wav.read(yes_files + file)
-        mfcc = pspeech.mfcc(signal,fs)
-        if (max < mfcc.shape[0]):
-            max = mfcc.shape[0]
+    dict_labels = {}
+    num_labels = 0
+    with open (label_file,'r') as labelfile:
+        data = labelfile.readlines()
 
-        i = i + 1
+        for line in data:
+            num_labels = num_labels + 1
+            dict_labels.update({int(line.split(':')[0].strip()) : line.split(':')[1].strip().lower()})
 
-    return max, i
+    return (num_labels, dict_labels)
 
 
-def main():
-
-    ncep = 26
-
-    train_files = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
-    out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
-
-    test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-    test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-
-    predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-    predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-
-    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
-
-    #create_numpy_batches(train_files,out_numpy,ncep)
-    #create_numpy_batches(test_files, test_out_numpy, ncep)
-    #create_numpy_batches(predict, predict_out, ncep)
-
-    create_randomized_bottleneck_batches(xferfiles_dir)
 
 
-def prepare_file_inference(file_dir,file_name):
-
-    ncep = 26
-    max = 99
+def prepare_mfcc_spectogram(file_dir,file_name,ncep,nfft,cutoff_mfcc,cutoff_spectogram,mfcc_padding_value = 0,specto_padding_value = 0):
 
     fs,signal = wav.read(file_dir + file_name)
     mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep=ncep)
-    #f, t, mfcc = sig.spectrogram(signal,fs)
+    f, t, specgram = sig.spectrogram(x=signal,fs=fs,nfft=nfft)
+
+    # Truncate mfcc frames to specified maximum cutoff
+    if(mfcc.shape[0] > cutoff_mfcc):
+        mfcc = mfcc[:cutoff_mfcc,:]
+
+    # MFCC: Apply padding if frame length lower than cutoff
+    mfcc_padding = ((0, cutoff_mfcc - mfcc.shape[0]), (0, 0))
+    nparr_mfcc = np.pad(mfcc, pad_width=mfcc_padding, mode='constant', constant_values=mfcc_padding_value) # Pad the mfcc with the padding value
+
+    # Spectogram padding
+    specgram2 = specgram.transpose() # Time major
+    if (specgram2.shape[0] > cutoff_spectogram):
+        specgram2 = specgram2[:cutoff_spectogram,:]
+
+    specgram_padding = ((0,cutoff_spectogram - specgram2.shape[0]),(0,0))
+    nparr_specgram = np.pad(specgram2,pad_width=specgram_padding,mode='constant',constant_values=specto_padding_value) # Pad with input spectogram value
+
+    return nparr_mfcc,nparr_specgram
 
 
-    # truncate to maxlen of 99 used for training
-    if(mfcc.shape[0] > 99):
-        mfcc = mfcc[:99,:]
 
-    padding = ((0, max - mfcc.shape[0]), (0, 0))
-    nparr2 = np.pad(mfcc, pad_width=padding, mode='constant', constant_values=0)
-    #nparr2 = np.expand_dims(nparr2,axis=0)
+def reset_folder_make_new(file_dir,label_count):
 
-    return nparr2
+    version_out_dir = file_dir + 'batch_label_count_' + str(label_count) + '/'
+
+    # Make a new directory, if this is a new graph version, to store all the batches in there for the new graph version
+    if (os.path.isdir(version_out_dir)):
+        shutil.rmtree(version_out_dir)
+
+    os.makedirs(version_out_dir)
+
+    return version_out_dir
 
 
-def create_randomized_bottleneck_batches(filedir):
+def create_randomized_bottleneck_batches(file_dir,file_dir_out,label_count,batch_size):
 
-    #TODO: randomize
 
-    filedirout = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid_batch/'
+    file_count = int(len([name for name in os.listdir('.') if os.path.isfile(name)]) / 2)
+    file_dir_out = reset_folder_make_new(file_dir_out,label_count)
+
+    os.chdir(file_dir)
+
+    print('Count of bottleneck files in training directory' + file_dir + ' is: ' + str(file_count))
+    print('Preparing the numpy bottleneck batches to the directory:' + file_dir_out)
 
     inputs = []
     labels = []
 
-
-    os.chdir(filedir)
-    i = 1
-    j = 0
+    i = 0
     for file in glob.glob('*.npy'):
 
         if (file.__contains__('label')):
@@ -97,72 +91,87 @@ def create_randomized_bottleneck_batches(filedir):
             inputs.append(nparr2.tolist())
             i = i + 1
 
-        if (i % 100 == 0):
-            j = j + 1
-            print ('creating batch:' + str(j))
-            np.save(filedirout + 'bottleneck_batch_' + str(j * 100) + '.npy',np.asarray(inputs))
-            np.save(filedirout + 'bottleneck_batch_label_' + str(j * 100) + '.npy',np.asarray(labels))
+        if ((len(labels) != 0 and len(labels) % batch_size == 0) or i == file_count):
+            print ('Creating Bottleneck Batch:' + str(i))
+            np.save(file_dir_out + 'bottleneck_batch_' + str(i) + '.npy',np.asarray(inputs))
+            np.save(file_dir_out + 'bottleneck_batch_label_' + str(i) + '.npy',np.asarray(labels))
 
             inputs = []
             labels = []
-            i = 1
-
-    print ('Saving validation batch')
-
-    np.save(filedirout + 'bottleneck_batch_valid.npy', np.asarray(inputs))
-    np.save(filedirout + 'bottleneck_batch_label_valid.npy', np.asarray(labels))
 
 
-def create_numpy_batches(file_dir,out_dir,ncep):
+def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512):
 
-    n, count = get_max(file_dir)
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    ' Creates numpy batches for scratch training '
+    ' A new batch can be created for each graph version '
+    ' Should only be needed for baselining, given bottlenecks are being used for xfer learning'
+    ' bottlenecks are created using another method'
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-    max = 99
-    print (n)
-    print (max)
+    os.chdir(file_dir)
+    file_count = len([name for name in os.listdir('.') if os.path.isfile(name)])
+    if (file_count == 0):
+        print ('No files in the directory:' + file_dir + ' exiting now')
+        return
+
     i = 0
     inputs = []
     labels = []
-    os.chdir(file_dir)
+    num_labels, labels_meta = get_labels_and_count(label_file)
+    version_out_dir = reset_folder_make_new(out_dir, label_count)
+
+    print ('Count of files in training directory' + file_dir + ' is: ' + str(file_count))
+    print ('Preparing the numpy batches to the directory:' + version_out_dir)
+
     for file in glob.glob("*.wav"):
-        print(file)
-        fs,signal = wav.read(file_dir + file)
-        mfcc = pspeech.mfcc(signal=signal,samplerate=fs,numcep = ncep)
 
-        if (mfcc.shape[0] > 99):
-            mfcc = mfcc[:99,:]
+        _,spectogram = prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram)
 
+        input_raw = spectogram.tolist()
+        inputs.append(input_raw)
 
-        padding = ((0, max - mfcc.shape[0]), (0, 0))
-        nparr2 = np.pad(mfcc, pad_width=padding, mode='constant', constant_values=0)
+        # Brands the file with one of x labels
+        # The filename must contain the string label name in lowercase
+        l = 0  # default
+        for j in range(0,num_labels):
+            if (file.__contains__(labels_meta[j])):
+                l = j # Assign the label and break, overrides default
+                break
 
-        inputLabel = nparr2.tolist()
-        inputs.append(inputLabel)
-
-        if (file.__contains__('yes')):
-            labels.append(YES)
-        else:
-            labels.append(UNK)
-
-        #print (labels)
+        print('Appending label' + str(l)+ ' to file ' + file)
+        labels.append(l)
 
         i = i + 1
 
+        if (i % batch_size == 0 or i == file_count):
 
-        if (i % 100 == 0 or i == count):
             npInputs = np.array(inputs)
             npLabels = np.array(labels)
-            #print (npInputs.shape)
-            #print (npLabels.shape)
 
-            np.save(out_dir + 'numpy_batch' + '_' + str(i) + '.npy',npInputs)
-            np.save(out_dir + 'numpy_batch_labels' + '_' + str(i) + '.npy', npLabels
-                    )
+            print ('Saving batch ' + str(i) + ' to the output dir ' + version_out_dir)
+            # Numpy batch dump the voice files in batches of batch_size
+            np.save(version_out_dir + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(i) + '.npy',npInputs)
+            np.save(version_out_dir + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(i) + '.npy', npLabels)
             inputs = []
             labels = []
 
-    return max, count # 99,4167
 
+def main():
+
+    train_files = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
+    out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
+
+    test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
+    test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
+
+    predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+    predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+
+    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
+    label_file = '/home/nitin/Desktop/tensorflow_speech_dataset/labels_meta/labels_meta.txt'
+
+    create_numpy_batches(file_dir = train_files,out_dir = out_numpy,label_count = 3,label_file = label_file,cutoff_mfcc = 99,cutoff_spectogram=99)
 
 if (__name__ == '__main__'):
     main()

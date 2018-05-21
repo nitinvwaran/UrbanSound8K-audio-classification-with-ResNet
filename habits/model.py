@@ -1,12 +1,17 @@
-
 import math
 import tensorflow as tf
 import numpy as np
 import habits.inputs_2 as inp
+from habits.config import Configuration as cfg
 import argparse
 import sys
 import os
 from tensorflow.python.framework import graph_util
+
+
+
+def get_configurations():
+    return cfg()
 
 
 def build_final_layer_graph(label_count,ncep,max_len,isTraining,bottleneck_input):
@@ -42,7 +47,7 @@ def build_final_layer_graph(label_count,ncep,max_len,isTraining,bottleneck_input
 
 
 
-def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTraining):
+def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,use_nfft = True):
     """Builds a convolutional model with low compute requirements.
 
     This is roughly the network labeled as 'cnn-one-fstride4' in the
@@ -87,12 +92,17 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
         TensorFlow node outputting logits results, and optionally a dropout
         placeholder.
     """
+    if (use_nfft): #nfft == spectogram
+        input_frequency_size = nfft
+    else
+        input_frequency_size = ncep
 
-    input_frequency_size = ncep
     input_time_size = max_len
 
     fingerprint_4d = tf.reshape(fingerprint_input,
                                     [-1, input_time_size, input_frequency_size, 1])
+
+    # TODO: Hyperparameters below
     first_filter_width = 8
     first_filter_height = input_time_size
     first_filter_count = 186
@@ -100,8 +110,8 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
     first_filter_stride_y = 1
     with tf.variable_scope('layer_one',reuse=tf.AUTO_REUSE):
 
-        l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=814, dtype=tf.float32)
-        l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=814, dtype=tf.float32)
+        l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=814, dtype=tf.float32) # TODO: Hyperparameter
+        l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=814, dtype=tf.float32) # TODO: Hyperparameter
 
 
         first_weights = tf.get_variable(name="weight_one",
@@ -127,7 +137,7 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
     first_conv_element_count = int(
             first_conv_output_width * first_conv_output_height * first_filter_count)
     flattened_first_conv = tf.reshape(first_dropout,[-1, first_conv_element_count])
-    first_fc_output_channels = 128
+    first_fc_output_channels = 128 # TODO: Hypermarameter
 
 
     with tf.variable_scope('layer_two',reuse=tf.AUTO_REUSE):
@@ -163,11 +173,8 @@ def build_graph(fingerprint_input,dropout_prob, ncep,max_len, label_count,isTrai
         print ('final_fc_input_shape' + str(final_fc_input.shape))
 
 
-    return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias # The bottleneck input
-
-
-
-
+    # # The bottleneck tensor is final_fc_input
+    return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias
 
 
 def inference_frozen(ncep,max_len,label_count,nparr,frozen_graph):
@@ -219,7 +226,7 @@ def save_frozen_graph(chkpoint_dir,max_len,ncep,label_count,isTraining):
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
     logits = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep, max_len=max_len,
-                         label_count=label_count, isTraining=isTraining)
+                          isTraining=isTraining)
 
     tf.nn.softmax(logits, name="labels_softmax")
 
@@ -290,26 +297,26 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
 
 
 
-def create_bottlenecks_cache(ncep,max_len,label_count,isTraining,chkpoint_dir):
+def create_bottlenecks_cache(file_dir, ncep,nfft,max_len , isTraining, chkpoint_dir, label_count, use_nfft = True):
 
-    xferfiles = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
-    xferfiles_valid = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
-    train = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
-    valid = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
+    #xferfiles = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
+    #xferfiles_valid = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
+    #train = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
+    #valid = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
 
-    three_label = '/home/nitin/Desktop/tensorflow_speech_dataset/new_labels/3_labels/'
+    #three_label = '/home/nitin/Desktop/tensorflow_speech_dataset/new_labels/3_labels/'
 
+    if (use_nfft):
+        input_size = nfft
+    else
+        input_size = ncep
 
-    fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+    fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-    bottleneck_input,_, _, _, _, _, _ = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep, max_len=max_len,
-                         label_count=label_count, isTraining=isTraining)
-
-    print ('aiyo:' + str(bottleneck_input.shape))
-
-    # checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
-    # chk_path = checkpoint.model_checkpoint_path
+    bottleneck_input,_, _, _, _, _, _ = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob,
+                                                    ncep=ncep, nfft= nfft, max_len=max_len,
+                                                    isTraining=isTraining,use_nfft=use_nfft)
 
     init = tf.global_variables_initializer()
     sess = tf.Session()
@@ -523,9 +530,7 @@ def retrain(ncep,max_len,label_count,isTraining,chkpoint_dir):
     #print(chk_path)
 
 
-def train(ncep,max_len,label_count,isTraining,batch_count):
-
-        do_bottleneck_cache  = True
+def base_train(ncep,max_len,label_count,isTraining,batch_size,do_bottleneck_cache = False):
 
         out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
         unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
@@ -533,7 +538,6 @@ def train(ncep,max_len,label_count,isTraining,batch_count):
         chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
         predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
 
-        check_nans = False
         epochs = 30
 
         sess = tf.InteractiveSession()
@@ -676,76 +680,9 @@ def invoke_inference(file_dir,file,label,label_count,chkpoint_dir,use_graph,ncep
 
     return np.argmax(result[0], axis=1)[0]
 
-if __name__  ==   '__main__':
-
-    file_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-    chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
-
-    file = 'aud_1525770163951.wav'
-    # file = 'achoo_4.wav'
-    label = ''
-    label_count = 3
-    
-    #result = main()
-    #result = main(file_dir=file_dir, file=file, label=label, label_count=label_count, chkpoint_dir=chkpoint_dir)
-    #print('The Result is:' + str(result))
-
-    #create_bottlenecks_cache(ncep=26,max_len = 99,label_count=2,isTraining=False,chkpoint_dir=chkpoint_dir)
-    #retrain(ncep=26,max_len=99,label_count=2,isTraining=True,chkpoint_dir=chkpoint_dir)
-    retrain(ncep=26,max_len=99,label_count=3,isTraining=False,chkpoint_dir=chkpoint_dir)
 
 
-    '''
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-            '--filedir',
-            type=str,
-            default='',
-            help='File Directory containing the test wave file',)
-    parser.add_argument(
-            '--file',
-            type=str,
-            default='',
-            help='The Test Wav File',)
-    parser.add_argument(
-            '--chkpoint_dir',
-            type=str,
-            default='',
-            help='Folder path of the checkpoint files',)
-    parser.add_argument(
-            '--label',
-            type=str,
-            default='',
-            help='The new label value',)
-    parser.add_argument(
-            '--labelcount',
-            type=int,
-            default=None,
-            help='Number of labels ',)
-    parser.add_argument(
-            '--usegraph',
-            type=int,
-            default='',
-            help='True or False, use graph',
-    )
-    parser.add_argument(
-            '--ncep',
-            type=int,
-            default=26,
-            help='Number of Cepstrum Coefficients to use',
-    )
-    parser.add_argument(
-            '--maxlen',
-            type=int,
-            default=99,
-            help='Cutoff number of mfcc frames for graph def',
-    )
-
-    FLAGS, unparsed = parser.parse_known_args()
-
-    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
-    '''
-
+def main(_):
 
 
 
