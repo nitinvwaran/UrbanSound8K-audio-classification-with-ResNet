@@ -7,27 +7,19 @@ import argparse
 import sys
 import os
 from tensorflow.python.framework import graph_util
+import shutil
+import glob
 
 
 
 def build_final_layer_graph(label_count,isTraining,bottleneck_input):
 
-    '''
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     Builds the final layer, this will need to be retrained with every new label
-    '''
-
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     second_fc_output_channels = 128
     ground_truth_name = 'ground_truth_retrain_label_' + str(label_count)
-    bottleneck_input_name = 'bottleneck_input_label_' + str(label_count)
-
-    #name_scope = 'layer_retrain_labels'
-    #with tf.name_scope(name_scope):
-        #bottleneck_input = tf.placeholder_with_default(input=bottleneck_input, shape=[None, second_fc_output_channels],name = bottleneck_input_name)
-
-    print('bottleneck_input')
-    print (bottleneck_input)
-
 
     with tf.variable_scope('layer_four',reuse=tf.AUTO_REUSE):
         l4b_init = tf.random_normal_initializer(mean=0, stddev=0.0, dtype=tf.float32)
@@ -35,20 +27,12 @@ def build_final_layer_graph(label_count,isTraining,bottleneck_input):
         final_fc_weights = tf.get_variable(name="weight_four" ,
                     shape= [second_fc_output_channels, label_count],dtype=tf.float32,initializer=l4w_init)
         final_fc_bias = tf.get_variable(name="bias_four" , shape=[label_count], dtype=tf.float32,initializer=l4b_init)
-        print ('final_fc_bias')
-        print(final_fc_bias)
-        print ('final_fc_weights')
-        print(final_fc_weights)
-
         final_fc = tf.matmul(bottleneck_input, final_fc_weights) + final_fc_bias
 
     ground_truth_retrain_input = tf.placeholder(dtype=tf.int64, shape=[None], name=ground_truth_name)
 
     # The final result - a softmax can be applied to this for inference
     return final_fc, bottleneck_input,ground_truth_retrain_input
-
-
-
 
 
 def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,use_nfft = True):
@@ -96,10 +80,10 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
         TensorFlow node outputting logits results, and optionally a dropout
         placeholder.
     """
-    #if (use_nfft): #nfft == spectogram
-    input_frequency_size = nfft
-    #else:
-    #    input_frequency_size = ncep
+    if (use_nfft): #nfft == spectogram
+        input_frequency_size = nfft
+    else:
+        input_frequency_size = ncep
 
     input_time_size = max_len
 
@@ -152,7 +136,6 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
                     shape= [first_conv_element_count, first_fc_output_channels], dtype=tf.float32,initializer=l2w_init)
         first_fc_bias = tf.get_variable(name="bias_two",shape=[first_fc_output_channels],dtype=tf.float32,initializer=l2b_init)
         first_fc = tf.matmul(flattened_first_conv, first_fc_weights) + first_fc_bias
-        print (first_fc_bias)
 
         if isTraining:
             second_fc_input = tf.nn.dropout(first_fc, dropout_prob)
@@ -175,10 +158,7 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
         else:
             final_fc_input = second_fc
 
-        print ('final_fc_input_shape' + str(final_fc_input.shape))
-
-
-    # # The bottleneck tensor is final_fc_input
+    #The bottleneck tensor is final_fc_input
     return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias
 
 
@@ -219,8 +199,6 @@ def load_graph(frozen_graph_filename):
         # Since we load everything in a new graph, this is not needed
         tf.import_graph_def(graph_def, name="prefix")
     return graph
-
-
 
 
 
@@ -302,19 +280,20 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
 
 
 
-def create_bottlenecks_cache(file_dir, ncep,nfft,max_len , isTraining, chkpoint_dir, label_count, labels_meta, use_nfft = True):
+def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mfcc,cutoff_spectogram, isTraining, base_chkpoint_dir, label_count, labels_meta_file, use_nfft = True):
 
-    #xferfiles = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
-    #xferfiles_valid = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
-    #train = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
-    #valid = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
 
-    #three_label = '/home/nitin/Desktop/tensorflow_speech_dataset/new_labels/3_labels/'
+    if (not os.path.exists(base_chkpoint_dir + 'checkpoint')):
+        raise Exception('Base Checkpoint File is Missing! A Crisis!')
 
     if (use_nfft):
         input_size = nfft
+        max_len = cutoff_spectogram
     else:
         input_size = ncep
+        max_len = cutoff_mfcc
+
+
 
     fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
@@ -327,9 +306,16 @@ def create_bottlenecks_cache(file_dir, ncep,nfft,max_len , isTraining, chkpoint_
     sess = tf.Session()
     sess.run(init)
 
-    # saver = tf.train.Saver(tf.global_variables())
-    saver = tf.train.import_meta_graph(chkpoint_dir + 'model_labels_2.ckpt-30.meta', clear_devices=True)
-    saver.restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
+    base_chkpoint_file_path = ''
+    with open (base_chkpoint_dir + 'checkpoint','r') as fchk:
+        for line in fchk.readlines():
+            base_chkpoint_file_path = line.split(':')[1].strip().replace('"','')
+            break
+
+    print ('Base Checkpoint File is:' + base_chkpoint_file_path)
+
+    saver = tf.train.import_meta_graph(base_chkpoint_file_path + '.meta', clear_devices=True)
+    saver.restore(sess, base_chkpoint_file_path)
 
     # uncomment below to debug variable names
     # between the graph in memory and the graph from checkpoint file
@@ -342,16 +328,25 @@ def create_bottlenecks_cache(file_dir, ncep,nfft,max_len , isTraining, chkpoint_
     # var_to_shape_map = reader.get_variable_to_shape_map()
     # print(var_to_shape_map)
     # print(chk_path)
-
     # saver.restore(sess,chk_path)
 
-    bottleneck_out_dir = inp.reset_folder_make_new(file_dir=file_dir,label_count=label_count)
+    _,labels_meta = inp.get_labels_and_count(labels_meta_file)
 
-    for filename in os.listdir(file_dir):
+    # Reset bottleneck input directory
+    if (os.path.exists(bottleneck_input_dir)):
+        shutil.rmtree(bottleneck_input_dir)
 
-        print ('Creating Bottleneck Inputs for file:' + filename)
-        _,spec = inp.prepare_mfcc_spectogram(file_dir = file_dir, file_name= filename, ncep=ncep,nfft=nfft,cutoff_mfcc = max_len, cutoff_spectogram=max_len)
-        nparr2 = np.reshape(spec, [-1, max_len * input_size])
+    os.makedirs(bottleneck_input_dir)
+
+    os.chdir(file_dir)
+    for filename in glob.glob('*.wav'):
+
+        mfcc,spec = inp.prepare_mfcc_spectogram(file_dir = file_dir, file_name= filename, ncep=ncep,nfft=nfft, cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram)
+
+        if (use_nfft):
+            nparr2 = np.reshape(spec, [-1, cutoff_spectogram * input_size])
+        else:
+            nparr2 = np.reshape(mfcc, [-1, cutoff_mfcc * input_size])
 
         bottleneck = sess.run(
             [
@@ -362,14 +357,15 @@ def create_bottlenecks_cache(file_dir, ncep,nfft,max_len , isTraining, chkpoint_
                 dropout_prob: 1.0,
             })
 
-        print('Saving Bottleneck Inputs for file:' + filename)
-        np.save(bottleneck_out_dir + 'numpy_bottle_' + filename +  '.npy', bottleneck[0])
+        #print('Saving Bottleneck Inputs for file:' + filename)
+        np.save(bottleneck_input_dir + 'numpy_bottle_' + filename +  '.npy', bottleneck[0])
 
         labels = []
+        l = inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename)
         labels.append(inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename))
-        print('Saving Bottleneck Label for file:' + filename)
+        #print('Saving Bottleneck Label ' + str(l) + ' for file:' + filename)
 
-        np.save(bottleneck_out_dir + 'numpy_bottle_labels_' + filename +  '.npy', np.array(labels))
+        np.save(bottleneck_input_dir + 'numpy_bottle_labels_' + filename +  '.npy', np.array(labels))
 
 
 def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
@@ -517,15 +513,7 @@ def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
     #print(chk_path)
 
 
-def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folder,validate_folder, n_train, n_valid, chkpoint_dir,use_nfft = True):
-
-        #out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
-        #unk_test = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-        #chkpoint_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/checkpoints/'
-        #chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
-        #predict_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-
-        epochs = 30
+def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folder,validate_folder, n_train, n_valid, epochs, chkpoint_dir,use_nfft = True,learning_rate = 0.001,dropoutprob = 0.5):
 
         sess = tf.InteractiveSession()
 
@@ -537,7 +525,7 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
         fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-        bottleneck_input,_,_,_,_,_,_ = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,nfft = nfft,max_len = max_len,isTraining=isTraining)
+        bottleneck_input,_,_,_,_,_,_ = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,nfft = nfft,max_len = max_len,isTraining=isTraining,use_nfft=use_nfft)
         final_fc,_,_ = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input = bottleneck_input)
 
         # Define loss and optimizer
@@ -566,23 +554,18 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
         global_step = tf.train.get_or_create_global_step()
         increment_global_step = tf.assign(global_step, global_step + 1)
 
-
         # For checkpoints
         saver = tf.train.Saver()
 
         init = tf.global_variables_initializer()
         sess.run(init)
 
-
-
         for i in range(1,epochs + 1):
-
             total_conf_matrix = None
 
+            print ('Epoch is: ' + str(i))
+
             for j in range(batch_size,n_train,batch_size):
-
-
-                print ('Batch:' + str(j))
 
                 npInputs = np.load(train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
                 npLabels = np.load(train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(j) + '.npy'),
@@ -596,8 +579,8 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
                     feed_dict={
                         fingerprint_input: npInputs2,
                         ground_truth_input: npLabels[0],
-                        learning_rate_input: 0.001,
-                        dropout_prob: 0.5,
+                        learning_rate_input: learning_rate,
+                        dropout_prob: dropoutprob,
                     })
 
                 if total_conf_matrix is None:
@@ -609,10 +592,11 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
 
             # Save after every 10 epochs
             if (i % 10 == 0):
-                print('Saving checkpoint')
+                print('Saving checkpoint for epoch:' + str(i))
                 saver.save(sess=sess,save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',global_step = i )
 
             # Validation set reporting
+            # TODO: validation dataset is in one big batch (.npy file) - should split?
             npValInputs = np.load(validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(n_valid) + '.npy')
             npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
 
@@ -625,8 +609,9 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
                     dropout_prob: 1.0
                 })
 
-            print('Predicted Index: ' + str(pred_indices))
-            print('Actual is:' + str(npValLabels.tolist()))
+            #print('Predicted Index: ' + str(pred_indices))
+            #print('Actual is:' + str(npValLabels.tolist()))
+            print ('The Validation Accuracy is:' + str(test_accuracy))
 
 
 '''

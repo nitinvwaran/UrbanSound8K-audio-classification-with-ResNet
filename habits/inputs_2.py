@@ -11,8 +11,6 @@ import shutil
 
 def get_labels_and_count(label_file):
 
-    print ('label file is ' + label_file)
-
     dict_labels = {}
     num_labels = 0
     with open (label_file,'r') as labelfile:
@@ -102,7 +100,7 @@ def create_randomized_bottleneck_batches(file_dir,file_dir_out,label_count,batch
             labels = []
 
 
-def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512):
+def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512,use_nfft = True):
 
     ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
     ' Creates numpy batches for scratch training '
@@ -115,7 +113,7 @@ def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc,
     file_count = len([name for name in os.listdir('.') if os.path.isfile(name)])
     if (file_count == 0):
         print ('No files in the directory:' + file_dir + ' exiting now')
-        return
+        raise Exception ('No files in the directory:' + file_dir)
 
     i = 0
     inputs = []
@@ -130,11 +128,15 @@ def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc,
 
         mfcc,spectogram = prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram)
 
-        input_raw = spectogram.tolist()
+        if (use_nfft):
+            input_raw = spectogram.tolist()
+
+        else:
+            input_raw = mfcc.tolist()
+
         inputs.append(input_raw)
 
         l = stamp_label(num_labels=num_labels,labels_meta=labels_meta,filename=file)
-        print('Appending label ' + str(l) +  ' to file ' + file)
         labels.append(l)
 
         i = i + 1
@@ -152,9 +154,6 @@ def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc,
             labels = []
 
     return version_out_dir, file_count
-
-
-
 
 
 def stamp_label(num_labels,labels_meta,filename):

@@ -1,0 +1,4 @@
+model_checkpoint_path: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-30"
+all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-10"
+all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-20"
+all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-30"
