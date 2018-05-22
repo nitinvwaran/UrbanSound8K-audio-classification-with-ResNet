@@ -1,10 +1,12 @@
 import glob
 import os
+
 import scipy.io.wavfile as wav
 import python_speech_features as pspeech
 import numpy as np
 import scipy.signal as sig
 import shutil
+
 
 
 def get_labels_and_count(label_file):
@@ -126,20 +128,13 @@ def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc,
 
     for file in glob.glob("*.wav"):
 
-        _,spectogram = prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram)
+        mfcc,spectogram = prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram)
 
         input_raw = spectogram.tolist()
         inputs.append(input_raw)
 
-        # Brands the file with one of x labels
-        # The filename must contain the string label name in lowercase
-        l = 0  # default
-        for j in range(0,num_labels):
-            if (file.__contains__(labels_meta[j])):
-                l = j # Assign the label and break, overrides default
-                break
-
-        print('Appending label' + str(l)+ ' to file ' + file)
+        l = stamp_label(num_labels=num_labels,labels_meta=labels_meta,filename=file)
+        print('Appending label ' + str(l) +  ' to file ' + file)
         labels.append(l)
 
         i = i + 1
@@ -156,8 +151,25 @@ def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc,
             inputs = []
             labels = []
 
+    return version_out_dir, file_count
 
-def main():
+
+
+
+
+def stamp_label(num_labels,labels_meta,filename):
+    # Brands the file with one of x labels
+    # The filename must contain the string label name in lowercase
+    l = 0  # default
+    for j in range(0, num_labels):
+        if (filename.__contains__(labels_meta[j])):
+            l = j  # Assign the label and break, overrides default
+            break
+
+    return l
+
+
+def main(_):
 
     train_files = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
     out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
