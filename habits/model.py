@@ -2,21 +2,19 @@ import math
 import tensorflow as tf
 import numpy as np
 import habits.inputs_2 as inp
-
-import argparse
-import sys
 import os
 from tensorflow.python.framework import graph_util
 import shutil
 import glob
+import uuid
 
 
 
 def build_final_layer_graph(label_count,isTraining,bottleneck_input):
 
-    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Builds the final layer, this will need to be retrained with every new label
-    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    Builds the final layer with number of cells = label count, this will need to be retrained with every new label
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     second_fc_output_channels = 128
     ground_truth_name = 'ground_truth_retrain_label_' + str(label_count)
@@ -34,52 +32,19 @@ def build_final_layer_graph(label_count,isTraining,bottleneck_input):
     # The final result - a softmax can be applied to this for inference
     return final_fc, bottleneck_input,ground_truth_retrain_input,  final_fc_weights, final_fc_bias
 
-
 def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,use_nfft = True):
-    """Builds a convolutional model with low compute requirements.
 
-    This is roughly the network labeled as 'cnn-one-fstride4' in the
-    'Convolutional Neural Networks for Small-footprint Keyword Spotting' paper:
-    http://www.isca-speech.org/archive/interspeech_2015/papers/i15_1478.pdf
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    Contains the core NN Architecture of the package. This can be replaced with any other architecture coded from scratch, 
+    Or a pre-trained model from which the relevant bottleneck tensors,  are extracted and fed
+    to the final layer graph function above for transfer learning / retraining
+    Extracting tensors at a layer that is not the bottleneck, will need changes to final layer graph function
+    As more tensors need to be fed to the final layer or the layers before it (depending on retraining judgements)
+    
+    The current function is versatile , can take mfcc or spectograms
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-    Here's the layout of the graph:
 
-    (fingerprint_input)
-              v
-          [Conv2D]<-(weights)
-              v
-          [BiasAdd]<-(bias)
-              v
-            [Relu]
-              v
-          [MatMul]<-(weights)
-              v
-          [BiasAdd]<-(bias)
-              v
-          [MatMul]<-(weights)
-              v
-          [BiasAdd]<-(bias)
-              v
-          [MatMul]<-(weights)
-              v
-          [BiasAdd]<-(bias)
-              v
-
-    This produces slightly lower quality results than the 'conv' model, but needs
-    fewer weight parameters and computations.
-
-      During training, dropout nodes are introduced after the relu, controlled by a
-      placeholder.
-
-      Args:
-        fingerprint_input: TensorFlow node that will output audio feature vectors.
-        model_settings: Dictionary of information about the model.
-        is_training: Whether the model is going to be used for training.
-
-    Returns:
-        TensorFlow node outputting logits results, and optionally a dropout
-        placeholder.
-    """
     if (use_nfft): #nfft == spectogram
         input_frequency_size = nfft
     else:
@@ -90,16 +55,18 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
     fingerprint_4d = tf.reshape(fingerprint_input,
                                     [-1, input_time_size, input_frequency_size, 1])
 
-    # TODO: Hyperparameters below
+
+    # Hyper Parameters!
     first_filter_width = 8
     first_filter_height = input_time_size
     first_filter_count = 186
     first_filter_stride_x = 1
     first_filter_stride_y = 1
+
     with tf.variable_scope('layer_one',reuse=tf.AUTO_REUSE):
 
-        l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=814, dtype=tf.float32) # TODO: Hyperparameter
-        l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=814, dtype=tf.float32) # TODO: Hyperparameter
+        l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
+        l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
 
 
         first_weights = tf.get_variable(name="weight_one",
@@ -125,12 +92,13 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
     first_conv_element_count = int(
             first_conv_output_width * first_conv_output_height * first_filter_count)
     flattened_first_conv = tf.reshape(first_dropout,[-1, first_conv_element_count])
-    first_fc_output_channels = 128 # TODO: Hypermarameter
+
+    first_fc_output_channels = 128
 
 
     with tf.variable_scope('layer_two',reuse=tf.AUTO_REUSE):
-        l2b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=90, dtype=tf.float32)
-        l2w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=90, dtype=tf.float32)
+        l2b_init = tf.random_normal_initializer(mean=0, stddev=0.1,  dtype=tf.float32)
+        l2w_init = tf.contrib.layers.xavier_initializer(uniform=False,  dtype=tf.float32)
 
         first_fc_weights = tf.get_variable(name="weight_two",
                     shape= [first_conv_element_count, first_fc_output_channels], dtype=tf.float32,initializer=l2w_init)
@@ -142,11 +110,11 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
         else:
             second_fc_input = first_fc
 
-    second_fc_output_channels = 128
+    second_fc_output_channels = 128 # number of cols in bottleneck tensor
 
     with tf.variable_scope('layer_three',reuse=tf.AUTO_REUSE):
-        l3b_init = tf.random_normal_initializer(mean=0, stddev=0.1, seed=666, dtype=tf.float32)
-        l3w_init = tf.contrib.layers.xavier_initializer(uniform=False, seed=666, dtype=tf.float32)
+        l3b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
+        l3w_init = tf.contrib.layers.xavier_initializer(uniform=False,  dtype=tf.float32)
 
         second_fc_weights = tf.get_variable(name="weight_three",
                     shape=[first_fc_output_channels, second_fc_output_channels],dtype=tf.float32,initializer=l3w_init)
@@ -161,8 +129,9 @@ def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,us
     #The bottleneck tensor is final_fc_input
     return final_fc_input, first_weights,first_bias,first_fc_weights,first_fc_bias,second_fc_weights,second_fc_bias
 
+def inference_frozen(nparr,frozen_graph):
 
-def inference_frozen(ncep,max_len,label_count,nparr,frozen_graph):
+    # TODO: dead function, reuse for when saving frozen graph is automated
 
     gph = load_graph(frozen_graph)
     y = gph.get_tensor_by_name('prefix/labels_softmax:0')
@@ -184,7 +153,6 @@ def inference_frozen(ncep,max_len,label_count,nparr,frozen_graph):
 
     return y_out
 
-
 def load_graph(frozen_graph_filename):
     # We load the protobuf file from the disk and parse it to retrieve the
     # unserialized graph_def
@@ -201,8 +169,9 @@ def load_graph(frozen_graph_filename):
     return graph
 
 
-
 def save_frozen_graph(chkpoint_dir,max_len,ncep,label_count,isTraining):
+
+    # TODO: dead function, reuse for when saving frozen graph is automated
 
 
     fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
@@ -233,26 +202,32 @@ def save_frozen_graph(chkpoint_dir,max_len,ncep,label_count,isTraining):
 
 
 
-def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
 
 
-    fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+def inference(ncep,nfft,cutoff_mfcc,cutoff_spectogram,label_count,isTraining,nparr,checkpoint_file_path,use_nfft=True):
+
+    if (use_nfft):
+        max_len = cutoff_spectogram
+        input_size = nfft
+    else:
+        max_len = cutoff_mfcc
+        input_size = ncep
+
+
+    fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
-    bottleneck_input, _,_,_,_,_,_= build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,max_len=max_len,label_count=label_count,isTraining=isTraining)
-    logits, _,_ = build_final_layer_graph(label_count = label_count,ncep=ncep,max_len = max_len,isTraining=isTraining,bottleneck_input=bottleneck_input)
-
-
-    #checkpoint = tf.train.get_checkpoint_state(checkpoint_dir= chkpoint_dir)
-    #chk_path = checkpoint.model_checkpoint_path
+    bottleneck_input, _,_,_,_,_,_= build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,nfft = nfft,max_len=max_len,isTraining=isTraining,use_nfft=use_nfft)
+    logits, _,_,_,_ = build_final_layer_graph(label_count = label_count,isTraining=isTraining,bottleneck_input=bottleneck_input)
 
     init = tf.global_variables_initializer()
     sess = tf.Session()
     sess.run(init)
 
-    #saver = tf.train.Saver(tf.global_variables())
-    saver = tf.train.import_meta_graph(chkpoint_dir + 'model_labels_3.ckpt-100.meta')
-    saver.restore(sess,chkpoint_dir + 'model_labels_3.ckpt-100')
+    print ('Loading checkpoint file:' + checkpoint_file_path)
+    saver = tf.train.import_meta_graph(checkpoint_file_path + '.meta',clear_devices=True)
+    saver.restore(sess,checkpoint_file_path)
+
 
     # uncomment below to debug variable names
     # between the graph in memory and the graph from checkpoint file
@@ -276,12 +251,29 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
             dropout_prob: 1.0,
         })
 
+    print ('Predictions are:' + str(predictions))
+    #print ('Softmax predictions are:' + tf.nn.softmax(logits))
     return predictions
+
+
+
+def get_checkpoint_file(checkpoint_dir):
+
+    chkpoint_file_path = ''
+    with open(checkpoint_dir + 'checkpoint', 'r') as fchk:
+        for line in fchk.readlines():
+            chkpoint_file_path = line.split(':')[1].strip().replace('"', '')
+            break
+
+    return chkpoint_file_path
 
 
 
 def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mfcc,cutoff_spectogram, isTraining, base_chkpoint_dir, label_count, labels_meta_file, use_nfft = True):
 
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    'Creates numpy files on disk for all training data that represents bottleneck transformation (.npy file) for each wav file'
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 
     if (not os.path.exists(base_chkpoint_dir + 'checkpoint')):
@@ -307,29 +299,27 @@ def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mf
     sess = tf.Session()
     sess.run(init)
 
-    base_chkpoint_file_path = ''
-    with open (base_chkpoint_dir + 'checkpoint','r') as fchk:
-        for line in fchk.readlines():
-            base_chkpoint_file_path = line.split(':')[1].strip().replace('"','')
-            break
-
+    base_chkpoint_file_path = get_checkpoint_file(base_chkpoint_dir)
     print ('Base Checkpoint File is:' + base_chkpoint_file_path)
 
     saver = tf.train.import_meta_graph(base_chkpoint_file_path + '.meta', clear_devices=True)
     saver.restore(sess, base_chkpoint_file_path)
 
+
+    ''''
     # uncomment below to debug variable names
     # between the graph in memory and the graph from checkpoint file
     # get_variable method should now reuse variables from memory scope
     # Variable method was creating new copies and suffixing the numbers to new variables in memory
-
-    # var_name = [v.name for v in tf.global_variables()]
-    # print(var_name)
-    # reader = pyten.NewCheckpointReader(chk_path)
-    # var_to_shape_map = reader.get_variable_to_shape_map()
-    # print(var_to_shape_map)
-    # print(chk_path)
-    # saver.restore(sess,chk_path)
+    
+    var_name = [v.name for v in tf.global_variables()]
+    print(var_name)
+    reader = pyten.NewCheckpointReader(chk_path)
+    var_to_shape_map = reader.get_variable_to_shape_map()
+    print(var_to_shape_map)
+    print(chk_path)
+    saver.restore(sess,chk_path)
+    '''
 
     _,labels_meta = inp.get_labels_and_count(labels_meta_file)
 
@@ -344,7 +334,6 @@ def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mf
     for filename in glob.glob('*.wav'):
 
         file_count = file_count + 1
-
         mfcc,spec = inp.prepare_mfcc_spectogram(file_dir = file_dir, file_name= filename, ncep=ncep,nfft=nfft, cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram)
 
         if (use_nfft):
@@ -361,33 +350,84 @@ def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mf
                 dropout_prob: 1.0,
             })
 
-        #print('Saving Bottleneck Inputs for file:' + filename)
         np.save(bottleneck_input_dir + 'numpy_bottle_' + filename +  '.npy', bottleneck[0])
 
         labels = []
-        l = inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename)
+        #l = inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename)
         labels.append(inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename))
-        #print('Saving Bottleneck Label ' + str(l) + ' for file:' + filename)
-
         np.save(bottleneck_input_dir + 'numpy_bottle_labels_' + filename +  '.npy', np.array(labels))
 
     return file_count
 
 
-def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
-            isTraining,batch_size,n_count,n_valid_count,epochs,chkpoint_dir, learning_input = 0.001):
+def rebuild_graph_post_transfer_learn(ncep, nfft, cutoff_mfcc,cutoff_spectogram,label_count,isTraining, chkpoint_dir, base_chkpoint_file, version_chkpoint_file,use_nfft = True):
+
+
+    if (use_nfft):
+        input_size = nfft
+        max_len = cutoff_spectogram
+    else:
+        input_size = ncep
+        max_len = cutoff_mfcc
+
+    with tf.Graph().as_default() as grap:
+
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+        bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias,\
+        second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob,
+                                                    ncep=ncep, nfft = nfft, max_len=max_len, isTraining=isTraining,use_nfft=use_nfft)
+
+        final_fc,_,_,_,_ = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input = bottleneck_tensor)
+
+        varb = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if not t.name.__contains__('layer_four')]
+        varb2 = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if t.name.__contains__('layer_four')]
+        varball = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)]
+
+    with tf.Session(graph = grap) as sess:
+
+        saver = tf.train.Saver(varb2)
+        saver.restore(sess, version_chkpoint_file)
+        saver = tf.train.Saver(varb)
+        saver.restore(sess, base_chkpoint_file)
+
+        'Useful debugging'
+        'val = [sess.run(v) for v in tf.global_variables()]'
+
+        saverFinal = tf.train.Saver(varball) # Turns out this new saver is the ley to combining graphs into a new graph / checkpoint
+        print('Saving checkpoint')
+        saverFinal.save(sess=sess, save_path=chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(label_count) + '.ckpt')
+        print ('Saved new graph version to location:' + chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(label_count) + '.ckpt')
+
+        'Use the below to check whether the new graph is being stitched together correctly'
+        #saverFinal.save(sess=sess, save_path='/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
+
+    # Use the below block to check whether the new graph was stitched together correctly
+    '''''
+    with tf.Session(graph=grap) as sess2:
+
+        init = tf.global_variables_initializer()
+        sess2.run(init)
+
+        print ('Verifying the correct graph')
+        saver = tf.train.import_meta_graph('/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt' + '.meta', clear_devices=True)
+        saver.restore(sess2, '/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
+
+
+        val = [sess2.run(v) for v in tf.global_variables()]
+    '''''
+
+def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count, ncep, nfft,cutoff_mfcc,cutoff_spectogram,
+            isTraining,batch_size,n_count,n_valid_count,epochs,chkpoint_dir, learning_input = 0.001,use_nfft=True):
 
     print ('Starting re-training with following parameters:' + ' train count: ' + str(n_count) + ' valid count ' + str(n_valid_count))
+
+    uu_id = uuid.uuid4()
+    retrain_chkpoint_dir = chkpoint_dir + 'tmp/version_model_labels_' + str(label_count) + '_time_' + str(uu_id) + '/'
 
     with tf.Graph().as_default() as grap:
 
         second_fc_output_channels = 128
-
-        #fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
-        #dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-        #bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias,\
-        #second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob,
-        #                                                ncep=ncep, nfft = nfft, max_len=max_len, isTraining=isTraining,use_nfft=use_nfft)
 
         bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],name = 'bottleneck_input')
         final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias \
@@ -417,6 +457,7 @@ def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
         sess.run(init)
 
         '''
+        ' Useful debugging below ' 
         # Check that only part of the graph is restored 
         var_name = [v.name for v in tf.global_variables()]
         print(var_name)
@@ -427,6 +468,7 @@ def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
         val = [sess.run(v) for v in varb]
         print(val)
         '''
+
 
         for i in range(1,epochs + 1):
             total_conf_matrix = None
@@ -476,7 +518,7 @@ def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
             # Save after every 10 epochs
             if (i % 10 == 0):
                 print('Saving checkpoint')
-                saver.save(sess=sess, save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt', global_step=i)
+                saver.save(sess=sess, save_path=retrain_chkpoint_dir +  'model_labels_' + str(label_count) + '.ckpt', global_step=i)
 
             v = batch_size
             valid_conf_matrix = None
@@ -520,6 +562,18 @@ def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
             true_pos = np.sum(np.diag(valid_conf_matrix))
             all_pos = np.sum(valid_conf_matrix)
             print(' Validation Accuracy is: ' + str(float(true_pos/all_pos)))
+
+    print ('Creating new complete graph')
+    base_checkpoint_file = get_checkpoint_file(checkpoint_dir=chkpoint_dir + 'base_dir/')
+    version_checkpoint_file = get_checkpoint_file(checkpoint_dir=retrain_chkpoint_dir)
+
+    print ('Base checkpoint graph is:' + base_checkpoint_file)
+    print ('Version checkpoint graph is:' + version_checkpoint_file)
+
+    rebuild_graph_post_transfer_learn(ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram,label_count=label_count,isTraining=isTraining
+                                      ,base_chkpoint_file=base_checkpoint_file,version_chkpoint_file=version_checkpoint_file,use_nfft=use_nfft,chkpoint_dir=chkpoint_dir)
+
+
 
 
 def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folder,validate_folder, n_train, n_valid, epochs, chkpoint_dir,use_nfft = True,learning_rate = 0.001,dropoutprob = 0.5):
@@ -650,40 +704,4 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
             true_pos = np.sum(np.diag(valid_conf_matrix))
             all_pos = np.sum(valid_conf_matrix)
             print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-
-
-'''
-def main(file_dir, file, label, label_count, chkpoint_dir):
-
-    # train(ncep=26,max_len = 99,label_count =2,isTraining=True,batch_count = 12600)
-    #result = invoke_inference(file_dir=FLAGS.filedir, label= FLAGS.label, file=FLAGS.file, label_count=FLAGS.labelcount, chkpoint_dir=FLAGS.chkpoint_dir,use_graph=FLAGS.usegraph,ncep=FLAGS.ncep,max_len=FLAGS.maxlen)
-    #result = invoke_inference(file_dir=file_dir, label= label, file=file, label_count=3, chkpoint_dir=chkpoint_dir,use_graph=0,ncep=26,max_len=99)
-    #return result
-'''
-
-
-
-def invoke_inference(file_dir,file,label,label_count,chkpoint_dir,use_graph,ncep,max_len):
-
-    # hardcode isTraining for inference for now...to revisit during label automation bit..
-    #ncep = 26,
-    #max_len = 99
-    isTraining = False
-
-    #nparray prep
-    nparr1 = inp.prepare_file_inference(file_dir = file_dir,file_name = file)
-    nparr1 = np.expand_dims(nparr1,axis=0)
-    nparr1 = np.reshape(nparr1,[-1,nparr1.shape[1] * nparr1.shape[2]])
-
-
-    if use_graph:
-        print ('Inference with graph')
-        result = inference_frozen(ncep=ncep,max_len=max_len,label_count=label_count,nparr=nparr1,frozen_graph=chkpoint_dir + 'habits_frozen.pb')
-    else:
-        print ('Inference without graph')
-        result = inference(ncep=ncep, max_len=max_len, label_count=label_count, isTraining=isTraining,nparr= nparr1,chkpoint_dir = chkpoint_dir)
-
-    return np.argmax(result[0], axis=1)[0]
-
 

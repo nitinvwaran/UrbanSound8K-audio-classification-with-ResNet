@@ -1,46 +1,10 @@
 import habits.model as model
-import tensorflow as tf
-import sys
-import argparse
 import os
 import shutil
 from habits.inputs_2 import get_labels_and_count
 from habits.inputs_2 import create_numpy_batches
 from habits.inputs_2 import create_randomized_bottleneck_batches
-
-
-class Configuration(object):
-    def __init__(self, train_directory, validate_directory, test_directory, train_bottleneck_dir,
-                 validate_bottleneck_dir, test_bottleneck_dir, checkpoint_dir, number_cepstrums, nfft_value,
-                 label_meta_file_path, do_scratch_training=False, do_transfer_training=False, cutoff_spectogram=99,
-                 cutoff_mfcc=99, regenerate_training_inputs=1, regenerate_test_inputs=1, batch_size=500,use_nfft =True
-                 ,num_epochs=20,learning_rate = 0.001,dropout_prob = 0.5):
-        self.train_directory = train_directory
-        self.validate_directory = validate_directory
-        self.test_directory = test_directory
-
-        self.train_bottleneck_dir = train_bottleneck_dir
-        self.validate_bottleneck_dir = validate_bottleneck_dir
-        self.test_bottleneck_dir = test_bottleneck_dir
-
-        self.checkpoint_dir = checkpoint_dir
-        self.ncep = number_cepstrums
-        self.nfft = nfft_value
-        self.label_meta_file_path = label_meta_file_path
-
-        self.cutoff_spectogram = cutoff_spectogram
-        self.cutoff_mfcc = cutoff_mfcc
-        self.do_scratch_training = do_scratch_training
-        self.do_transfer_training = do_transfer_training
-        self.regenerate_training_inputs = regenerate_training_inputs
-        self.regenerate_test_inputs = regenerate_test_inputs
-        self.batch_size = batch_size
-        self.use_nfft = use_nfft
-        self.num_epochs = num_epochs
-        self.learning_rate = learning_rate
-        self.dropout_prob = dropout_prob
-
-
+from habits.habits_configuration import Configuration
 
 
 def create_numpy_train_batches(conf_object,num_labels):
@@ -295,7 +259,7 @@ def main():
     cutoff_spectogram = 300
     cutoff_mfcc = 99
     use_nfft = False
-    num_epochs = 30
+    num_epochs = 100
 
     conf_object = Configuration(train_directory=train_directory,validate_directory=validate_directory,test_directory=test_directory,train_bottleneck_dir=train_bottleneck_dir,
                        validate_bottleneck_dir=validate_bottleneck_dir,test_bottleneck_dir = test_bottleneck_dir,
@@ -347,9 +311,13 @@ def main():
 
         # Retrain the weights for just the softmax layer, given the bottleneck inputs
         model.retrain(train_bottleneck_dir=bottleneck_batches_train_dir,
-                      valid_bottleneck_dir = bottleneck_batched_valid_dir, label_count = num_labels,isTraining = False,batch_size=conf_object.batch_size,
-                      n_count = train_files_count,n_valid_count = valid_file_count,epochs=conf_object.num_epochs,chkpoint_dir=conf_object.checkpoint_dir
+                      valid_bottleneck_dir = bottleneck_batched_valid_dir, label_count = num_labels,ncep=conf_object.ncep,nfft=conf_object.nfft
+                      ,cutoff_mfcc=conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,isTraining = False,batch_size=conf_object.batch_size,
+                      n_count = train_files_count,n_valid_count = valid_file_count,epochs=conf_object.num_epochs,chkpoint_dir=conf_object.checkpoint_dir,use_nfft=conf_object.use_nfft
                       )
+
+
+
 
 
 if __name__ == '__main__':
@@ -484,26 +452,6 @@ t        default='',
 
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
     '''
-
-    '''
-    file_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-    chkpoint_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
-
-    file = 'aud_1525770163951.wav'
-    # file = 'achoo_4.wav'
-    label = ''
-    label_count = 3
-
-    #result = main()
-    #result = main(file_dir=file_dir, file=file, label=label, label_count=label_count, chkpoint_dir=chkpoint_dir)
-    #print('The Result is:' + str(result))
-
-    #create_bottlenecks_cache(ncep=26,max_len = 99,label_count=2,isTraining=False,chkpoint_dir=chkpoint_dir)
-    #retrain(ncep=26,max_len=99,label_count=2,isTraining=True,chkpoint_dir=chkpoint_dir)
-    retrain(ncep=26,max_len=99,label_count=3,isTraining=False,chkpoint_dir=chkpoint_dir)
-
-    '''
-
 
 
 
