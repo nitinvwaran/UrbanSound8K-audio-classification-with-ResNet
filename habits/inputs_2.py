@@ -64,15 +64,15 @@ def reset_folder_make_new(file_dir,label_count):
     return version_out_dir
 
 
-def create_randomized_bottleneck_batches(file_dir,file_dir_out,label_count,batch_size):
-
-
-    file_count = int(len([name for name in os.listdir('.') if os.path.isfile(name)]) / 2)
-    file_dir_out = reset_folder_make_new(file_dir_out,label_count)
+def create_randomized_bottleneck_batches(file_dir,label_count,batch_size):
 
     os.chdir(file_dir)
+    file_dir_out = reset_folder_make_new(file_dir = file_dir,label_count=label_count)
 
-    print('Count of bottleneck files in training directory' + file_dir + ' is: ' + str(file_count))
+    # TODO: Randomize, though this selection 'should' be random...
+    file_count = int(len([name for name in os.listdir('.') if os.path.isfile(name)]) / 2)
+
+    print('Count of bottleneck files in  directory' + file_dir + ' is: ' + str(file_count))
     print('Preparing the numpy bottleneck batches to the directory:' + file_dir_out)
 
     inputs = []
@@ -99,6 +99,7 @@ def create_randomized_bottleneck_batches(file_dir,file_dir_out,label_count,batch
             inputs = []
             labels = []
 
+    return file_dir_out
 
 def create_numpy_batches(file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512,use_nfft = True):
 

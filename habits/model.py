@@ -32,7 +32,7 @@ def build_final_layer_graph(label_count,isTraining,bottleneck_input):
     ground_truth_retrain_input = tf.placeholder(dtype=tf.int64, shape=[None], name=ground_truth_name)
 
     # The final result - a softmax can be applied to this for inference
-    return final_fc, bottleneck_input,ground_truth_retrain_input
+    return final_fc, bottleneck_input,ground_truth_retrain_input,  final_fc_weights, final_fc_bias
 
 
 def build_graph(fingerprint_input,dropout_prob, ncep,nfft,max_len ,isTraining,use_nfft = True):
@@ -283,6 +283,7 @@ def inference(ncep,max_len,label_count,isTraining,nparr,chkpoint_dir):
 def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mfcc,cutoff_spectogram, isTraining, base_chkpoint_dir, label_count, labels_meta_file, use_nfft = True):
 
 
+
     if (not os.path.exists(base_chkpoint_dir + 'checkpoint')):
         raise Exception('Base Checkpoint File is Missing! A Crisis!')
 
@@ -339,7 +340,10 @@ def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mf
     os.makedirs(bottleneck_input_dir)
 
     os.chdir(file_dir)
+    file_count = 0
     for filename in glob.glob('*.wav'):
+
+        file_count = file_count + 1
 
         mfcc,spec = inp.prepare_mfcc_spectogram(file_dir = file_dir, file_name= filename, ncep=ncep,nfft=nfft, cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram)
 
@@ -367,26 +371,27 @@ def create_bottlenecks_cache(file_dir, bottleneck_input_dir, ncep,nfft,cutoff_mf
 
         np.save(bottleneck_input_dir + 'numpy_bottle_labels_' + filename +  '.npy', np.array(labels))
 
+    return file_count
 
-def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
 
+def retrain(train_bottleneck_dir, valid_bottleneck_dir, label_count,
+            isTraining,batch_size,n_count,n_valid_count,epochs,chkpoint_dir, learning_input = 0.001):
+
+    print ('Starting re-training with following parameters:' + ' train count: ' + str(n_count) + ' valid count ' + str(n_valid_count))
 
     with tf.Graph().as_default() as grap:
 
         second_fc_output_channels = 128
 
-        #fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+        #fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size], name="fingerprint_input")
         #dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-        #bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias, second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep,
-        #                                       max_len=max_len, label_count=label_count, isTraining=isTraining)
-
-        #print(bottleneck_tensor.shape)
+        #bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias,\
+        #second_fc_weights, second_fc_bias = build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob,
+        #                                                ncep=ncep, nfft = nfft, max_len=max_len, isTraining=isTraining,use_nfft=use_nfft)
 
         bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],name = 'bottleneck_input')
-
-        final_fc, bottleneck_input, ground_truth_retrain_input = build_final_layer_graph(label_count=label_count,ncep=ncep,max_len=max_len,isTraining=isTraining,bottleneck_input=bottleneck_input)
-
+        final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias \
+            = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input=bottleneck_input)
 
         with tf.name_scope('cross_entropy'):
             cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
@@ -405,19 +410,11 @@ def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
         evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
-
-
     with tf.Session(graph=grap) as sess:
 
-        xferfiles_batch = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_batch/'
-        xferfiles_valid_batch = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid_batch/'
-
-        print ('restoring')
-        #tf.train.Saver({'layer_one/weight_one':first_weights,'layer_one/bias_one':first_bias,'layer_two/weight_two':first_fc_weights,'layer_two/bias_two':first_fc_bias,'layer_three/weight_three':second_fc_weights,'layer_three/bias_three':second_fc_bias}).restore(sess, chkpoint_dir + 'model_labels_2.ckpt-30')
-
+        saver = tf.train.Saver()
         init = tf.global_variables_initializer()
         sess.run(init)
-        print ('restored')
 
         '''
         # Check that only part of the graph is restored 
@@ -431,27 +428,19 @@ def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
         print(val)
         '''
 
-
-        batch_count = 14900
-        epochs = 100
-
         for i in range(1,epochs + 1):
             total_conf_matrix = None
 
-            for j in range(100, batch_count, 100):
+            j = batch_size
+            while (j <= n_count):
 
-                npInputs = np.load(xferfiles_batch + 'bottleneck_batch' + '_' + str(j) + '.npy')
-                npLabels = np.load(xferfiles_batch + 'bottleneck_batch_label' + '_' + str(j) + '.npy')
+                #print ('Training batch:' + str(j))
+
+                npInputs = np.load(train_bottleneck_dir + 'bottleneck_batch' + '_' + str(j) + '.npy')
+                npLabels = np.load(train_bottleneck_dir + 'bottleneck_batch_label' + '_' + str(j) + '.npy')
 
                 npInputs2 = np.reshape(npInputs,[npInputs.shape[0] * npInputs.shape[1],npInputs.shape[2]])
                 npLabels2 = np.reshape(npLabels,[npLabels.shape[0]])
-
-
-
-                #print ('bottleneck input shape:' + str(npInputs2.shape))
-                #print('bottleneck label shape:' + str(npLabels2.shape))
-
-                #npInputs2 = np.reshape(npInputs, [-1, max_len * ncep])
 
                 xent_mean, _, conf_matrix = sess.run(
                     [
@@ -459,14 +448,10 @@ def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
                          confusion_matrix
                     ],
                     feed_dict={
-                        #fingerprint_input: None,
                         bottleneck_input: npInputs2,
                         ground_truth_retrain_input: npLabels2,
-                        learning_rate_input: 0.001,
-                        #dropout_prob: None,
+                        learning_rate_input: learning_input,
                     })
-
-
 
 
                 if total_conf_matrix is None:
@@ -474,43 +459,67 @@ def retrain(ncep, nfft, label_count,max_len,isTraining,chkpoint_dir):
                 else:
                     total_conf_matrix += conf_matrix
 
-            print('epoch:' + str(i))
-            print('Confusion Matrix:' + '\n' + str(total_conf_matrix))
+
+                if (j == n_count):
+                    break
+
+
+                if (j + batch_size > n_count):
+                    j = n_count
+                else:
+                    j = j + batch_size
+
+            print('Epoch:' + str(i))
+            print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
 
 
             # Save after every 10 epochs
-            #if (i % 10 == 0):
-                # print('Saving checkpoint')
-                # saver.save(sess=sess, save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt', global_step=i)
-                # saver.export_meta_graph(filename=chkpoint_dir  + 'model_labels_' + str(label_count) + '.ckpt-' + str(i) + '.meta')
+            if (i % 10 == 0):
+                print('Saving checkpoint')
+                saver.save(sess=sess, save_path=chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt', global_step=i)
 
-            # Validation set reporting
-            npValInputs = np.load(xferfiles_valid_batch + 'bottleneck_batch_valid.npy')
-            npValLabels = np.load(xferfiles_valid_batch  + 'bottleneck_batch_label_valid.npy')
+            v = batch_size
+            valid_conf_matrix = None
 
-            npValInputs2 = np.reshape(npValInputs, [npValInputs.shape[0] * npValInputs.shape[1], npValInputs.shape[2]])
-            npValLabels2 = np.reshape(npValLabels, [npValLabels.shape[0]])
+            if (batch_size > n_valid_count):
+                v = n_valid_count
 
-            print ('val inputs shape' + str(npValInputs2.shape))
-            print('val labels shape' + str(npValLabels2.shape))
+            while (v <= n_valid_count):
 
-            test_accuracy, conf_matrix, pred_indices = sess.run(
-            [evaluation_step, confusion_matrix, predicted_indices],
-                feed_dict={
-                    bottleneck_input: npValInputs2,
-                    ground_truth_retrain_input: npValLabels2,
+                # Validation set reporting
+                #print ('Validation on batch:' + str(v))
 
-                })
+                npValInputs = np.load(valid_bottleneck_dir + 'bottleneck_batch_' + str(v) + '.npy')
+                npValLabels = np.load(valid_bottleneck_dir  + 'bottleneck_batch_label_' + str(v) + '.npy')
 
-            print('Predicted Index: ' + str(pred_indices))
-            print('Actual is:' + str(npValLabels.tolist()))
-            print('Accuracy is:' + str(test_accuracy))
+                npValInputs2 = np.reshape(npValInputs, [npValInputs.shape[0] * npValInputs.shape[1], npValInputs.shape[2]])
+                npValLabels2 = np.reshape(npValLabels, [npValLabels.shape[0]])
 
+                _, conf_matrix, _ = sess.run(
+                [evaluation_step, confusion_matrix, predicted_indices],
+                    feed_dict={
+                        bottleneck_input: npValInputs2,
+                        ground_truth_retrain_input: npValLabels2,
 
-    #reader = pyten.NewCheckpointReader(chk_path)
-    #var_to_shape_map = reader.get_variable_to_shape_map()
-    #print(var_to_shape_map)
-    #print(chk_path)
+                    })
+
+                if (valid_conf_matrix is None):
+                    valid_conf_matrix = conf_matrix
+                else:
+                    valid_conf_matrix += conf_matrix
+
+                if (v == n_valid_count):
+                    break
+
+                if (v + batch_size > n_count):
+                    v = n_count
+                else:
+                    v = v + batch_size
+
+            print('Validation Confusion Matrix: ' + '\n' +  str(valid_conf_matrix))
+            true_pos = np.sum(np.diag(valid_conf_matrix))
+            all_pos = np.sum(valid_conf_matrix)
+            print(' Validation Accuracy is: ' + str(float(true_pos/all_pos)))
 
 
 def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folder,validate_folder, n_train, n_valid, epochs, chkpoint_dir,use_nfft = True,learning_rate = 0.001,dropoutprob = 0.5):
@@ -526,7 +535,7 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
         bottleneck_input,_,_,_,_,_,_ = build_graph(fingerprint_input=fingerprint_input,dropout_prob=dropout_prob,ncep=ncep,nfft = nfft,max_len = max_len,isTraining=isTraining,use_nfft=use_nfft)
-        final_fc,_,_ = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input = bottleneck_input)
+        final_fc,_,_,_,_ = build_final_layer_graph(label_count=label_count,isTraining=isTraining,bottleneck_input = bottleneck_input)
 
         # Define loss and optimizer
         ground_truth_input = tf.placeholder(
@@ -565,7 +574,8 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
 
             print ('Epoch is: ' + str(i))
 
-            for j in range(batch_size,n_train,batch_size):
+            j = batch_size
+            while (j <= n_train):
 
                 npInputs = np.load(train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
                 npLabels = np.load(train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(j) + '.npy'),
@@ -588,7 +598,15 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
                 else:
                     total_conf_matrix += conf_matrix
 
-            print ('Confusion Matrix:' + '\n' +  str(total_conf_matrix))
+                if (j == n_train):
+                    break
+
+                if (j + batch_size > n_train):
+                    j = n_train
+                else:
+                    j = j + batch_size
+
+            print ('Training Confusion Matrix:' + '\n' +  str(total_conf_matrix))
 
             # Save after every 10 epochs
             if (i % 10 == 0):
@@ -596,22 +614,43 @@ def base_train(ncep, nfft, max_len,label_count,isTraining,batch_size,train_folde
                 saver.save(sess=sess,save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',global_step = i )
 
             # Validation set reporting
-            # TODO: validation dataset is in one big batch (.npy file) - should split?
-            npValInputs = np.load(validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(n_valid) + '.npy')
-            npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
+            v = batch_size
+            valid_conf_matrix = None
+            if (batch_size > n_valid):
+                v = n_valid
 
-            npValLabels = np.load(validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(n_valid) + '.npy')
-            test_accuracy, conf_matrix, pred_indices = sess.run(
-                [evaluation_step, confusion_matrix, predicted_indices],
-                feed_dict={
-                    fingerprint_input: npValInputs,
-                    ground_truth_input: npValLabels,
-                    dropout_prob: 1.0
-                })
+            while (v <= n_valid):
 
-            #print('Predicted Index: ' + str(pred_indices))
-            #print('Actual is:' + str(npValLabels.tolist()))
-            print ('The Validation Accuracy is:' + str(test_accuracy))
+                npValInputs = np.load(validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
+                npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
+
+                npValLabels = np.load(validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(v) + '.npy')
+                test_accuracy, conf_matrix, pred_indices = sess.run(
+                    [evaluation_step, confusion_matrix, predicted_indices],
+                    feed_dict={
+                        fingerprint_input: npValInputs,
+                        ground_truth_input: npValLabels,
+                        dropout_prob: 1.0
+                    })
+
+                if (valid_conf_matrix is None):
+                    valid_conf_matrix = conf_matrix
+                else:
+                    valid_conf_matrix += conf_matrix
+
+                if (v == n_valid):
+                    break
+
+                if (v + batch_size > n_valid):
+                    v = n_valid
+                else:
+                    v = v + batch_size
+
+            print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
+            true_pos = np.sum(np.diag(valid_conf_matrix))
+            all_pos = np.sum(valid_conf_matrix)
+            print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+
 
 
 '''
