@@ -2,7 +2,7 @@ class Configuration(object):
     def __init__(self, train_directory, validate_directory, test_directory, train_bottleneck_dir,
                  validate_bottleneck_dir, test_bottleneck_dir, checkpoint_dir, number_cepstrums, nfft_value,
                  label_meta_file_path, do_scratch_training=False, do_transfer_training=False, cutoff_spectogram=99,
-                 cutoff_mfcc=99, regenerate_training_inputs=1, regenerate_test_inputs=1, batch_size=500,use_nfft =True
+                 cutoff_mfcc=99, regenerate_training_inputs=False, regenerate_test_inputs=False, batch_size=1000,use_nfft =True
                  ,num_epochs=20,learning_rate = 0.001,dropout_prob = 0.5,use_graph=False):
         self.train_directory = train_directory
         self.validate_directory = validate_directory

@@ -2,37 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-100.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-100.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-60.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-60.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-70.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-70.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-70.meta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-80.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-80.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-90.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-90.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-90.meta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/habits/checkpoint" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/habits/transfer_model_label_count_3.ckpt.data-00000-of-00001" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/habits/transfer_model_label_count_3.ckpt.index" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/habits/transfer_model_label_count_3.ckpt.meta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/habits/habits_configuration.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/habits/habits_inference.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-10.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-10.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-10.meta" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-80.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-20.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-20.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-20.meta" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-100.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-30.data-00000-of-00001" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-30.index" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-30.meta" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/base_dir/base_model_labels_2.ckpt-60.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/base_dir/checkpoint" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/base_dir/checkpoint" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/habit.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/habit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/habits/habits_configuration.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/habits_configuration.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -94,8 +64,8 @@
       <file leaf-file-name="habit.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/habit.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-57">
-              <caret line="270" selection-start-line="270" selection-end-line="270" />
+            <state relative-caret-position="330">
+              <caret line="257" column="34" lean-forward="true" selection-start-line="257" selection-start-column="34" selection-end-line="257" selection-end-column="34" />
               <folding>
                 <element signature="e#0#28#0" expanded="true" />
                 <element signature="e#1706#5392#0" />
@@ -107,11 +77,23 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="habits_inference.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="habits_configuration.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="75">
+              <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="habits_inference.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="30">
-              <caret line="2" column="11" selection-start-line="2" selection-start-column="11" selection-end-line="2" selection-end-column="11" />
+            <state relative-caret-position="450">
+              <caret line="30" column="76" lean-forward="true" selection-start-line="30" selection-start-column="76" selection-end-line="30" selection-end-column="76" />
+              <folding>
+                <element signature="e#0#9#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -180,6 +162,7 @@
         <option value="$PROJECT_DIR$/habits/model.py" />
         <option value="$PROJECT_DIR$/habits_inference.py" />
         <option value="$PROJECT_DIR$/habits/habits_inference.py" />
+        <option value="$PROJECT_DIR$/habits/habits_configuration.py" />
       </list>
     </option>
   </component>
@@ -354,19 +337,19 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="67" y="25" width="1717" height="1095" extended-state="6" />
+    <frame x="67" y="25" width="2357" height="1335" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.2172352" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.16745998" />
       <window_info anchor="bottom" id="TODO" order="5" />
       <window_info anchor="bottom" id="Messages" />
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32977587" />
-      <window_info anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.1807301" />
+      <window_info active="true" anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" visible="true" weight="0.2834271" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Python Console" order="8" weight="0.32870865" />
       <window_info id="Structure" order="1" sideWeight="0.50053364" side_tool="true" weight="0.1466188" />
-      <window_info anchor="bottom" id="Terminal" order="9" visible="true" weight="0.10885806" />
+      <window_info anchor="bottom" id="Terminal" order="9" visible="true" weight="0.11384877" />
       <window_info anchor="bottom" id="Debug" order="2" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -619,27 +602,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/habits/habit.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-57">
-          <caret line="270" selection-start-line="270" selection-end-line="270" />
-          <folding>
-            <element signature="e#0#28#0" expanded="true" />
-            <element signature="e#1706#5392#0" />
-            <element signature="e#5630#7448#0" />
-            <element signature="e#7577#11492#0" />
-            <element signature="e#11534#13487#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="495">
-          <caret line="33" lean-forward="true" selection-start-line="33" selection-end-line="33" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/habits/model.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="271">
@@ -660,10 +622,34 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habit.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="257" column="34" lean-forward="true" selection-start-line="257" selection-start-column="34" selection-end-line="257" selection-end-column="34" />
+          <folding>
+            <element signature="e#0#28#0" expanded="true" />
+            <element signature="e#1706#5392#0" />
+            <element signature="e#5630#7448#0" />
+            <element signature="e#7577#11492#0" />
+            <element signature="e#11534#13487#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="30">
-          <caret line="2" column="11" selection-start-line="2" selection-start-column="11" selection-end-line="2" selection-end-column="11" />
+        <state relative-caret-position="450">
+          <caret line="30" column="76" lean-forward="true" selection-start-line="30" selection-start-column="76" selection-end-line="30" selection-end-column="76" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
         </state>
       </provider>
     </entry>
