@@ -19,9 +19,10 @@ If you choose the latter option, bottleneck files are created for all files in t
 
 6. Use the habits_inference.py module to test the graph with test data.
 
-There are two main benefits from this project:
+There are some benefits from this project:
 1. Graph version after transfer learning is automatically created.
 2. The main Neural Net Architecture has been modularized in the function build_graph(). This can easily be replaced with another architecture, or any model from the Tensorflow hub. The current model is very simple, based on a single CNN layer with two FC layers following.
+3. The project is flexible enough to process either mfcc, or raw spectogram input. Change the flag use_nfft to True, to use spectograms. However, a base graph trained on MFCC, cannot be used to create bottleneck files based on spectogram input, and vice versa, for the graph versioning and new labels training via transfer learning.
 
 
 
