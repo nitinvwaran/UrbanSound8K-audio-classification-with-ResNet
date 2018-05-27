@@ -242,6 +242,7 @@ def inference(ncep,nfft,cutoff_mfcc,cutoff_spectogram,label_count,isTraining,npa
     #print(chk_path)
 
     #saver.restore(sess,chk_path)
+
     predictions = sess.run(
         [
             logits

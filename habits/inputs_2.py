@@ -171,19 +171,8 @@ def stamp_label(num_labels,labels_meta,filename):
 
 def main(_):
 
-    train_files = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
-    out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/numpy/'
+    print ('Nothing to do by myself')
 
-    test_files = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-    test_out_numpy = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-
-    predict = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-    predict_out = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-
-    xferfiles_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
-    label_file = '/home/nitin/Desktop/tensorflow_speech_dataset/labels_meta/labels_meta.txt'
-
-    create_numpy_batches(file_dir = train_files,out_dir = out_numpy,label_count = 3,label_file = label_file,cutoff_mfcc = 99,cutoff_spectogram=99)
 
 if (__name__ == '__main__'):
     main()

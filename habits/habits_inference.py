@@ -1,14 +1,13 @@
 import os
 import numpy as np
 import glob
+import argparse
+import sys
 from habits.inputs_2 import prepare_mfcc_spectogram
 from habits.habits_configuration import Configuration
 from habits.model import inference_frozen
 from habits.model import inference
 from habits.inputs_2 import get_labels_and_count
-
-
-
 
 
 def invoke_inference(conf_object):
@@ -57,18 +56,10 @@ def invoke_inference(conf_object):
 
 def main():
 
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    ' # This code block to go in console call version '
-    ' # If more config to add, add them to the configuration class, then the command line parser below, then here. '
-
-    'conf_object = Configuration(train_directory=FLAGS.train_directory,validate_directory=FLAGS.validate_directory,test_directory=FLAGS.test_directory,train_bottleneck_dir=FLAGS.train_bottleneck_dir,'
-    '                   validate_bottleneck_dir=FLAGS.validate_bottleneck_dir,test_bottleneck_dir = FLAGS.test_bottleneck_dir,'
-    '                   checkpoint_dir=FLAGS.checkpoint_base_dir,number_cepstrums=FLAGS.number_cepstrums,nfft_value=FLAGS.nfft_value,label_meta_file_path=FLAGS.label_meta_file_path,'
-    '                   do_scratch_training=FLAGS.do_scratch_training,do_transfer_training=FLAGS.do_transfer_training, cutoff_spectogram = FLAGS.cutoff_spectogram,cutoff_mfcc=FLAGS.cutoff_mfcc,'
-    '                   regenerate_training_inputs =FLAGS.regenerate_training_inputs,regenerate_test_inputs=FLAGS.regenerate_test_inputs,batch_size=FLAGS.batch_size,use_nfft = FLAGS.use_nfft'
-    '                   ,num_epochs = FLAGS.num_epochs,learning_rate = FLAGS.learning_rate,dropout_prob = FLAGS.dropout_prob)'
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
+    '''
+    
+    ' Below for debugging
+    
     batch_size = 1  # Could change for batch inference
     test_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
@@ -84,14 +75,13 @@ def main():
     train_bottleneck_dir = ''
     validate_bottleneck_dir = ''
     test_bottleneck_dir = ''
+    '''
 
-    conf_object = Configuration(test_directory=test_directory,
-                                checkpoint_dir=checkpoint_base_dir, number_cepstrums=number_cepstrums,
-                                nfft_value=nfft_value, label_meta_file_path=label_meta_file_path,
-                                cutoff_spectogram=cutoff_spectogram, cutoff_mfcc=cutoff_mfcc,
-                                batch_size=batch_size, use_nfft=use_nfft, use_graph=use_graph,train_directory=train_directory,
-                                validate_directory=validate_directory,train_bottleneck_dir=train_bottleneck_dir,validate_bottleneck_dir=validate_bottleneck_dir,
-                                test_bottleneck_dir=test_bottleneck_dir
+    conf_object = Configuration(test_directory=FLAGS.test_directory,
+                                checkpoint_dir=FLAGS.checkpoint_base_dir, number_cepstrums=FLAGS.number_cepstrums,
+                                nfft_value=FLAGS.nfft_value, label_meta_file_path=FLAS.label_meta_file_path,
+                                cutoff_spectogram=FLAGS.cutoff_spectogram, cutoff_mfcc=FLAGS.cutoff_mfcc,
+                                batch_size=FLAGS.batch_size, use_nfft=FLAGS.use_nfft, use_graph=FLAGS.use_graph,
                                 )
 
     result = invoke_inference(conf_object)
@@ -100,9 +90,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
 
-    '''
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--batch_size',
@@ -167,5 +155,5 @@ if __name__ == '__main__':
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
-    '''
+
 
