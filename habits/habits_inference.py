@@ -1,13 +1,10 @@
 import os
 import numpy as np
 import glob
-import argparse
-import sys
-from habits.inputs_2 import prepare_mfcc_spectogram
+from habits.inputs_2 import CommonHelpers as common_helpers
+from habits.inputs_2 import InputRaw as input_raw
 from habits.habits_configuration import Configuration
-from habits.model import inference_frozen
-from habits.model import inference
-from habits.inputs_2 import get_labels_and_count
+from habits.model import AudioEventDetection as aed # Some of these methods should get its own common class
 
 
 def invoke_inference(conf_object):
@@ -17,7 +14,7 @@ def invoke_inference(conf_object):
     for file in glob.glob('*.wav'):
 
         file_name = file
-        mfcc,spectogram = prepare_mfcc_spectogram(file_dir = conf_object.test_directory,file_name = file, ncep=conf_object.ncep,nfft=conf_object.nfft
+        mfcc,spectogram = input_raw.prepare_mfcc_spectogram(file_dir = conf_object.test_directory,file_name = file, ncep=conf_object.ncep,nfft=conf_object.nfft
                                                   ,cutoff_mfcc=conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram
                                                   )
         if (conf_object.use_nfft):
@@ -32,7 +29,7 @@ def invoke_inference(conf_object):
         print ('Shape of input matrix:' + str(nparr1.shape))
 
 
-    num_labels, label_dict = get_labels_and_count(label_file=conf_object.label_meta_file_path)
+    num_labels, label_dict = common_helpers.get_labels_and_count(label_file=conf_object.label_meta_file_path)
     checkpoint_file_path = conf_object.checkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(num_labels) + '.ckpt'
 
     # What happens if base model is used?
@@ -42,12 +39,13 @@ def invoke_inference(conf_object):
     print ('Checkpoint File is:' + checkpoint_file_path)
     print ('File to Infer:' + file_name)
 
+    # TODO: common helper class for inference among various model classes
     if conf_object.use_graph:
         print ('Inference with graph')
-        result = inference_frozen(nparr=nparr1,frozen_graph=conf_object + 'habits_frozen.pb') # TODO: configure once frozen graph creation automated
+        result = aed.inference_frozen(nparr=nparr1,frozen_graph=conf_object + 'habits_frozen.pb') # TODO: configure once frozen graph creation automated
     else:
         print ('Inference without graph')
-        result = inference(ncep=conf_object.ncep, nfft=conf_object.nfft, cutoff_mfcc = conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,label_count=num_labels,
+        result = aed.inference(ncep=conf_object.ncep, nfft=conf_object.nfft, cutoff_mfcc = conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,label_count=num_labels,
                            isTraining=False,nparr=nparr1,checkpoint_file_path=checkpoint_file_path,use_nfft=conf_object.use_nfft
                            )
 
@@ -56,10 +54,18 @@ def invoke_inference(conf_object):
 
 def main():
 
-    '''
-    
-    ' Below for debugging
-    
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    ' # This code block to go in console call version '
+    ' # If more config to add, add them to the configuration class, then the command line parser below, then here. '
+
+    'conf_object = Configuration(train_directory=FLAGS.train_directory,validate_directory=FLAGS.validate_directory,test_directory=FLAGS.test_directory,train_bottleneck_dir=FLAGS.train_bottleneck_dir,'
+    '                   validate_bottleneck_dir=FLAGS.validate_bottleneck_dir,test_bottleneck_dir = FLAGS.test_bottleneck_dir,'
+    '                   checkpoint_dir=FLAGS.checkpoint_base_dir,number_cepstrums=FLAGS.number_cepstrums,nfft_value=FLAGS.nfft_value,label_meta_file_path=FLAGS.label_meta_file_path,'
+    '                   do_scratch_training=FLAGS.do_scratch_training,do_transfer_training=FLAGS.do_transfer_training, cutoff_spectogram = FLAGS.cutoff_spectogram,cutoff_mfcc=FLAGS.cutoff_mfcc,'
+    '                   regenerate_training_inputs =FLAGS.regenerate_training_inputs,regenerate_test_inputs=FLAGS.regenerate_test_inputs,batch_size=FLAGS.batch_size,use_nfft = FLAGS.use_nfft'
+    '                   ,num_epochs = FLAGS.num_epochs,learning_rate = FLAGS.learning_rate,dropout_prob = FLAGS.dropout_prob)'
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
     batch_size = 1  # Could change for batch inference
     test_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
     checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
@@ -75,13 +81,14 @@ def main():
     train_bottleneck_dir = ''
     validate_bottleneck_dir = ''
     test_bottleneck_dir = ''
-    '''
 
-    conf_object = Configuration(test_directory=FLAGS.test_directory,
-                                checkpoint_dir=FLAGS.checkpoint_base_dir, number_cepstrums=FLAGS.number_cepstrums,
-                                nfft_value=FLAGS.nfft_value, label_meta_file_path=FLAS.label_meta_file_path,
-                                cutoff_spectogram=FLAGS.cutoff_spectogram, cutoff_mfcc=FLAGS.cutoff_mfcc,
-                                batch_size=FLAGS.batch_size, use_nfft=FLAGS.use_nfft, use_graph=FLAGS.use_graph,
+    conf_object = Configuration(test_directory=test_directory,
+                                checkpoint_dir=checkpoint_base_dir, number_cepstrums=number_cepstrums,
+                                nfft_value=nfft_value, label_meta_file_path=label_meta_file_path,
+                                cutoff_spectogram=cutoff_spectogram, cutoff_mfcc=cutoff_mfcc,
+                                batch_size=batch_size, use_nfft=use_nfft, use_graph=use_graph,train_directory=train_directory,
+                                validate_directory=validate_directory,train_bottleneck_dir=train_bottleneck_dir,validate_bottleneck_dir=validate_bottleneck_dir,
+                                test_bottleneck_dir=test_bottleneck_dir
                                 )
 
     result = invoke_inference(conf_object)
@@ -90,7 +97,9 @@ def main():
 
 
 if __name__ == '__main__':
+    main()
 
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--batch_size',
@@ -155,5 +164,5 @@ if __name__ == '__main__':
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
-
+    '''
 
