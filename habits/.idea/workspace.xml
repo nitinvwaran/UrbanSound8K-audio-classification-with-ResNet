@@ -14,11 +14,8 @@
       <file leaf-file-name="habit.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habit.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="635">
-              <caret line="456" selection-start-line="456" selection-end-line="456" />
-              <folding>
-                <element signature="e#0#9#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="85">
+              <caret line="6" column="48" selection-start-line="6" selection-start-column="48" selection-end-line="6" selection-end-column="48" />
             </state>
           </provider>
         </entry>
@@ -26,8 +23,8 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="12393">
-              <caret line="729" selection-start-line="729" selection-end-line="729" />
+            <state relative-caret-position="550">
+              <caret line="729" lean-forward="true" selection-start-line="729" selection-end-line="729" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -38,7 +35,7 @@
       <file leaf-file-name="inputs_2.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/inputs_2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="5440">
+            <state relative-caret-position="550">
               <caret line="320" selection-start-line="320" selection-end-line="320" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
@@ -204,15 +201,16 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="67" y="25" width="1717" height="1095" extended-state="6" />
+    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1250748" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1250748" />
       <window_info anchor="bottom" id="TODO" order="9" />
       <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
       <window_info anchor="right" id="Run" order="3" visible="true" weight="0.23219629" />
       <window_info anchor="bottom" id="Version Control" order="1" show_stripe_button="false" />
       <window_info anchor="bottom" id="Python Console" order="2" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info anchor="bottom" id="Terminal" order="3" visible="true" weight="0.23216188" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="3" visible="true" weight="0.3226837" />
       <window_info anchor="bottom" id="Debug" order="6" weight="0.4" />
       <window_info id="Favorites" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="5" />
@@ -229,11 +227,6 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/habit.py</url>
-        </line-breakpoint>
-      </breakpoints>
       <option name="time" value="1" />
     </breakpoint-manager>
   </component>
@@ -258,6 +251,13 @@
     <entry file="file://$PROJECT_DIR$/habits_configuration.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://$PROJECT_DIR$/habit.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="6" column="48" selection-start-line="6" selection-start-column="48" selection-end-line="6" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/habits_inference.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2856">
@@ -268,19 +268,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/habit.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="635">
-          <caret line="456" selection-start-line="456" selection-end-line="456" />
-          <folding>
-            <element signature="e#0#9#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/inputs_2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5440">
+        <state relative-caret-position="550">
           <caret line="320" selection-start-line="320" selection-end-line="320" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
@@ -290,8 +280,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="12393">
-          <caret line="729" selection-start-line="729" selection-end-line="729" />
+        <state relative-caret-position="550">
+          <caret line="729" lean-forward="true" selection-start-line="729" selection-end-line="729" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
           </folding>

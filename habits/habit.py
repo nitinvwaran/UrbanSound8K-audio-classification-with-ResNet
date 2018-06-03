@@ -1,3 +1,4 @@
+import habits.model as model
 import os
 import shutil
 from habits.inputs_2 import CommonHelpers as common_helpers
