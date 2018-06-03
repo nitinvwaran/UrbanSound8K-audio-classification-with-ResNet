@@ -23,8 +23,8 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="550">
-              <caret line="729" lean-forward="true" selection-start-line="729" selection-end-line="729" />
+            <state relative-caret-position="422">
+              <caret line="729" selection-start-line="729" selection-end-line="729" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -201,16 +201,15 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="67" y="25" width="1717" height="1095" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1250748" />
       <window_info anchor="bottom" id="TODO" order="9" />
       <window_info anchor="bottom" id="Event Log" order="0" side_tool="true" />
-      <window_info anchor="right" id="Run" order="3" visible="true" weight="0.23219629" />
+      <window_info anchor="right" id="Run" order="3" weight="0.23219629" />
       <window_info anchor="bottom" id="Version Control" order="1" show_stripe_button="false" />
       <window_info anchor="bottom" id="Python Console" order="2" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="3" visible="true" weight="0.3226837" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="3" visible="true" weight="0.4195953" />
       <window_info anchor="bottom" id="Debug" order="6" weight="0.4" />
       <window_info id="Favorites" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="5" />
@@ -280,8 +279,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="550">
-          <caret line="729" lean-forward="true" selection-start-line="729" selection-end-line="729" />
+        <state relative-caret-position="422">
+          <caret line="729" selection-start-line="729" selection-end-line="729" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
           </folding>
