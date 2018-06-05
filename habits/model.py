@@ -3,10 +3,223 @@ import tensorflow as tf
 import numpy as np
 import habits.inputs_2 as inp
 import os
-from tensorflow.python.framework import graph_util
 import shutil
 import glob
 import uuid
+from tensorflow.python.framework import graph_util
+from audioset import vggish_slim, vggish_params
+
+slim = tf.contrib.slim
+
+
+class AudioEventDetectionVGG():
+
+    def __init__(self, train_vggish, vggish_chkpt_file):
+        self.train_vggish = train_vggish
+        self.vggish_chkpt_file = vggish_chkpt_file
+
+    def build_graph(self):
+
+        embeddings = vggish_slim.define_vggish_slim(training=self.train_vggish)
+        return embeddings
+
+    def build_final_layer_graph(self, label_count, bottleneck_input):
+
+        num_fc_units = 20
+        fc = slim.fully_connected(bottleneck_input, num_fc_units)
+
+        logits = slim.fully_connected(
+            fc, label_count, activation_fn=None, scope='logits')
+
+        sig_logits = tf.nn.softmax(logits, name='prediction')
+
+        ground_truth = tf.placeholder(dtype=tf.int64, shape=[None])
+
+        return logits, sig_logits, ground_truth
+
+    def retrain(self, label_count, num_epochs, batch_size, train_batch_dir, valid_batch_dir, n_count, n_valid_count):
+
+        print(train_batch_dir)
+        print(valid_batch_dir)
+
+        with tf.Graph().as_default(), tf.Session() as sess:
+
+            'What is interesting is that google model allows the loaded weights from checkpoint'
+            'to not be trained, by setting the flag to false'
+            'This allows us to defined the whole model here, train just the new layers, and ' \
+            'save the whole graph in one place, instead of the cut and paste from different graphs approach'
+
+            bottleneck_input = vggish_slim.define_vggish_slim(self.train_vggish)
+            logits, sig_logits, ground_truth = self.build_final_layer_graph(label_count, bottleneck_input)
+
+            with tf.name_scope('cross_entropy_loss'):
+
+                labels = tf.placeholder(dtype=tf.float32, shape=[None, label_count], name="labels")
+
+                cross_entropy_mean = tf.losses.softmax_cross_entropy(
+                    onehot_labels=labels, logits=logits)
+                loss_tensor = tf.reduce_mean(cross_entropy_mean, name='loss_op')
+
+            with tf.name_scope('train'):
+                optimizer = tf.train.MomentumOptimizer(
+                    vggish_params.LEARNING_RATE, momentum=0.9, use_nesterov=False)
+                training_op = optimizer.minimize(loss_tensor, name='train_op')
+
+            '''
+            with tf.name_scope('cross_entropy_loss'):
+
+                labels = tf.placeholder(dtype=tf.float32, shape=[None, label_count], name="labels")
+
+                xent = tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=logits, labels=labels, name='xent')
+                loss_tensor = tf.reduce_mean(xent, name='loss_op')
+
+            with tf.name_scope('train'):
+                optimizer = tf.train.AdamOptimizer(
+                    learning_rate=vggish_params.LEARNING_RATE,
+                    epsilon=vggish_params.ADAM_EPSILON)
+                training_op = optimizer.minimize(loss_tensor, name='train_op')
+            '''
+
+            predicted_indices = tf.argmax(sig_logits, 1)
+            correct_prediction = tf.equal(predicted_indices, ground_truth)
+            confusion_matrix = tf.confusion_matrix(
+                ground_truth, predicted_indices, num_classes=label_count)
+            evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+            sess.run(tf.global_variables_initializer())
+            vggish_slim.load_vggish_slim_checkpoint(sess, self.vggish_chkpt_file)
+
+            features_tensor = sess.graph.get_tensor_by_name(
+                vggish_params.INPUT_TENSOR_NAME)
+            # labels_tensor = sess.graph.get_tensor_by_name('cross_entropy_loss/labels:0')
+            # loss_tensor = sess.graph.get_tensor_by_name('cross_entropy_loss/loss_op:0')
+            # training_op = sess.graph.get_operation_by_name('train/train_op')
+
+            # dataset = tf.data.Dataset.from_tensor_slices((features_tensor,labels))
+            # dataset = dataset.batch(batch_size= batch_size)
+
+            # val_dataset = tf.data.Dataset.from_tensor_slices((features_tensor,labels))
+            # val_dataset = val_dataset.batch(batch_size = batch_size)
+
+            # iterator = dataset.make_initializable_iterator()
+            # val_iterator = val_dataset.make_initializable_iterator()
+
+            for i in range(1, num_epochs + 1):
+
+                total_conf_matrix = None
+
+                j = batch_size
+                while (j <= n_count):
+
+                    npInputs = np.load(train_batch_dir + 'vgg_embedding_batch' + str(j) + '.npy')
+                    npLabels = np.load(train_batch_dir + 'vgg_embedding_batch_label_hot' + str(j) + '.npy')
+                    npLabelsTruth = np.load(train_batch_dir + 'vgg_embedding_batch_label' + str(j) + '.npy')
+
+                    print('Batch is:' + str(j))
+                    # print (npInputs.shape)
+                    # print (npLabels.shape)
+
+                    # sess.run(iterator.initializer,feed_dict={
+                    #        features_tensor: npInputs,
+                    #        labels: npLabels
+                    #   })
+
+                    train, loss, sigmoid, conf_matrix = sess.run(
+                        [
+                            training_op, loss_tensor, sig_logits, confusion_matrix
+                        ],
+                        feed_dict={
+                            features_tensor: npInputs,
+                            labels: npLabels,
+                            ground_truth: npLabelsTruth
+
+                        }
+                    )
+                    # print('Train Labels:' + str(npLabelsTruth))
+                    # print('Train Labels Hot:' + str(npLabels))
+                    # print('The train sigmoid is:' + str(sigmoid))
+
+                    if total_conf_matrix is None:
+                        total_conf_matrix = conf_matrix
+                    else:
+                        total_conf_matrix += conf_matrix
+
+                    if (j == n_count):
+                        break
+
+                    if (j + batch_size > n_count):
+                        j = n_count
+                    else:
+                        j += batch_size
+
+                print('Epoch:' + str(i))
+                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
+                true_pos_train = np.sum(np.diag(total_conf_matrix))
+                all_pos_train = np.sum(total_conf_matrix)
+                print(' Train Accuracy is: ' + str(float(true_pos_train / all_pos_train)))
+
+                # Save after every 10 epochs
+                # if (i % 10 == 0):
+                # print('Saving checkpoint')
+                # saver.save(sess=sess, save_path=retrain_chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt',
+                #           global_step=i)
+
+                # Validation set reporting
+                # print ('Validation on batch:' + str(v))
+
+                v = batch_size
+
+                if (v > n_valid_count):
+                    v = n_valid_count
+
+                valid_conf_matrix = None
+                while (v <= n_valid_count):
+
+                    npInputsVal = np.load(valid_batch_dir + 'vgg_embedding_batch' + str(v) + '.npy')
+                    npLabelsVal = np.load(valid_batch_dir + 'vgg_embedding_batch_label_hot' + str(v) + '.npy')
+                    npLabelsValTruth = np.load(valid_batch_dir + 'vgg_embedding_batch_label' + str(v) + '.npy')
+
+                    print('Validation batch:' + str(v))
+                    # print (npInputsVal.shape)
+                    # print (npLabelsVal.shape)
+
+                    # sess.run(val_iterator.initializer,feed_dict={
+                    #        features_tensor: npInputsVal,
+                    #        labels: npLabelsVal,
+                    #    })
+
+                    sigmoid_val, conf_matrix = sess.run(
+                        [sig_logits, confusion_matrix],
+                        feed_dict={
+                            features_tensor: npInputsVal,
+                            labels: npLabelsVal,
+                            ground_truth: npLabelsValTruth
+                        }
+                    )
+
+                    # print('Val Labels:' + str(npLabelsValTruth))
+                    # print('Val Labels Hot:' + str(npLabelsVal))
+
+                    # print('The validation sigmoid is:' + str(sigmoid_val))
+
+                    if (valid_conf_matrix is None):
+                        valid_conf_matrix = conf_matrix
+                    else:
+                        valid_conf_matrix += conf_matrix
+
+                    if (v == n_valid_count):
+                        break
+
+                    if (v + batch_size > n_valid_count):
+                        v = n_valid_count
+                    else:
+                        v += batch_size
+
+                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
+                true_pos = np.sum(np.diag(valid_conf_matrix))
+                all_pos = np.sum(valid_conf_matrix)
+                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
 
 class AudioEventDetection(object):
@@ -562,8 +775,8 @@ class AudioEventDetection(object):
                     if (v == n_valid_count):
                         break
 
-                    if (v + batch_size > n_count):
-                        v = n_count
+                    if (v + batch_size > n_valid_count):
+                        v = n_valid_count
                     else:
                         v = v + batch_size
 
@@ -727,3 +940,14 @@ class AudioEventDetection(object):
             all_pos = np.sum(valid_conf_matrix)
             print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
+
+if __name__ == '__main__':
+    vggish_chkpt_file = '/home/nitin/Desktop/aws_habits/FMSG_Habits/audioset/vggish_model.ckpt'
+    train_batch_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train_batch/numpy_batch/vgg_embedding_batch/'
+    valid_batch_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/valid_batch/numpy_batch/vgg_embedding_batch/'
+    n_count = 6624
+    n_valid_count = 2187
+
+    model_vgg = AudioEventDetectionVGG(train_vggish=False, vggish_chkpt_file=vggish_chkpt_file)
+    model_vgg.retrain(label_count=4, num_epochs=20, batch_size=500, train_batch_dir=train_batch_dir,
+                      valid_batch_dir=valid_batch_dir, n_count=n_count, n_valid_count=n_valid_count)
