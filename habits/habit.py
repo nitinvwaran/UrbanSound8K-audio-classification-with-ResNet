@@ -1,17 +1,18 @@
-import habits.model as model
 import os
 import shutil
-from habits.inputs_2 import CommonHelpers as common_helpers
-from habits.inputs_2 import InputRaw as input_raw
+from habits.inputs_2 import CommonHelpers
+from habits.inputs_2 import InputRaw
 from habits.habits_configuration import Configuration
-from habits.model import AudioEventDetection as aed
+from habits.model import AudioEventDetection
 
 
-def create_numpy_train_batches(conf_object,num_labels):
+def create_numpy_train_batches(conf_object):
+
+    input_raw = InputRaw()
 
     # Creating the inputs - either bottleneck, or numpy arrays from scratch
-    train_out_folder = conf_object.train_directory + 'batch_label_count_' + str(num_labels) + '/'
-    valid_out_folder = conf_object.validate_directory + 'batch_label_count_' + str(num_labels) + '/'
+    train_out_folder = conf_object.train_directory + 'batch_label_count_' + str(conf_object.num_labels) + '/'
+    valid_out_folder = conf_object.validate_directory + 'batch_label_count_' + str(conf_object.num_labels) + '/'
 
     train_count = 0
     valid_count = 0
@@ -29,37 +30,17 @@ def create_numpy_train_batches(conf_object,num_labels):
 
     if (conf_object.regenerate_training_inputs):
 
+
         # Generate numpy files for train and validate
         # Existing numpy batches will be erased and replaced
         try:
 
-            train_out_folder, train_count = input_raw.create_numpy_batches(file_dir=conf_object.train_directory,
-                                                                out_dir=conf_object.train_directory,
-                                                                label_count=num_labels,
-                                                                label_file=conf_object.label_meta_file_path,
-                                                                cutoff_mfcc=conf_object.cutoff_mfcc,
-                                                                cutoff_spectogram=conf_object.cutoff_spectogram,
-                                                                batch_size=conf_object.batch_size,
-                                                                ncep=conf_object.ncep,
-                                                                nfft=conf_object.nfft,
-                                                                use_nfft=conf_object.use_nfft
-                                                                 )
-
+            train_out_folder, train_count = input_raw.create_numpy_batches(conf_object)
             with open(train_out_folder + 'train_count.txt', 'w') as wf:
                 wf.write(str(train_count) + '\n')
 
             # Create validate batches
-            valid_out_folder, valid_count = input_raw.create_numpy_batches(file_dir=conf_object.validate_directory,
-                                                                out_dir=conf_object.validate_directory,
-                                                                label_count=num_labels,
-                                                                label_file=conf_object.label_meta_file_path,
-                                                                cutoff_mfcc=conf_object.cutoff_mfcc,
-                                                                cutoff_spectogram=conf_object.cutoff_spectogram,
-                                                                batch_size=conf_object.batch_size,
-                                                                ncep=conf_object.ncep,
-                                                                nfft=conf_object.nfft,
-                                                                use_nfft=conf_object.use_nfft
-                                                                )
+            valid_out_folder, valid_count = input_raw.create_numpy_batches(conf_object)
 
             with open(valid_out_folder + 'valid_count.txt', 'w') as wf:
                 wf.write(str(valid_count) + '\n')
@@ -81,8 +62,9 @@ def create_numpy_train_batches(conf_object,num_labels):
     return train_out_folder,valid_out_folder,train_count,valid_count
 
 
-def create_numpy_test_batches(conf_object,num_labels):
+def create_numpy_test_batches(conf_object):
 
+    input_raw = InputRaw()
 
     if (conf_object.test_directory.strip() == ''):
         print ('You must specify a test directory with wav files for testing, my son')
@@ -90,7 +72,7 @@ def create_numpy_test_batches(conf_object,num_labels):
 
 
     # Creating the inputs - either bottleneck, or numpy arrays from scratch
-    test_out_folder = conf_object.test_directory + 'batch_label_count_' + str(num_labels) + '/'
+    test_out_folder = conf_object.test_directory + 'batch_label_count_' + str(conf_object.num_labels) + '/'
 
     test_count = 0
     if (os.path.exists(test_out_folder)):
@@ -103,16 +85,7 @@ def create_numpy_test_batches(conf_object,num_labels):
     if (conf_object.regenerate_test_inputs):
 
         try:
-            test_out_folder, test_count = input_raw.create_numpy_batches(
-                                file_dir=conf_object.test_directory,
-                                out_dir=conf_object.test_directory,
-                                label_count=num_labels,
-                                label_file=conf_object.label_meta_file_path,
-                                cutoff_mfcc=conf_object.cutoff_mfcc,
-                                cutoff_spectogram=conf_object.cutoff_spectogram,
-                                batch_size=conf_object.batch_size, ncep=conf_object.ncep,
-                                nfft=conf_object.nfft,use_nfft = conf_object.use_nfft
-                                )
+            test_out_folder, test_count = input_raw.create_numpy_batches(conf_object)
             with open (test_out_folder + 'test_count.txt','w') as wf:
                 wf.write(str(test_count) + '\n')
 
@@ -128,10 +101,13 @@ def create_numpy_test_batches(conf_object,num_labels):
     return test_out_folder,test_count
 
 
-def create_train_bottleneck_batches(conf_object,num_labels):
+def create_train_bottleneck_batches(conf_object):
 
-    bottleneck_batches_train_dir = conf_object.train_bottleneck_dir + 'batch_label_count_' + str(num_labels) + '/'
-    bottleneck_batched_valid_dir = conf_object.validate_bottleneck_dir + 'batch_label_count_' + str(num_labels) + '/'
+    aed = AudioEventDetection()
+    input_raw = InputRaw()
+
+    bottleneck_batches_train_dir = conf_object.train_bottleneck_dir + 'batch_label_count_' + str(conf_object.num_labels) + '/'
+    bottleneck_batched_valid_dir = conf_object.validate_bottleneck_dir + 'batch_label_count_' + str(conf_object.num_labels) + '/'
 
     train_files_count = 0
     if (os.path.exists(bottleneck_batches_train_dir)):
@@ -152,21 +128,18 @@ def create_train_bottleneck_batches(conf_object,num_labels):
         print ('Starting Transfer Training')
 
         print ('Base Checkpoint Dir:' + base_checkpoint_dir)
-        print ('Num_Labels is:' + str(num_labels))
+        print ('Num_Labels is:' + str(conf_object.num_labels))
 
         print ('Creating bottleneck cache files for train data in folder:' + conf_object.train_bottleneck_dir)
 
         try:
 
-            train_files_count = aed.create_bottlenecks_cache(file_dir=conf_object.train_directory,bottleneck_input_dir=conf_object.train_bottleneck_dir,
-                                            ncep = conf_object.ncep,nfft = conf_object.nfft,cutoff_mfcc = conf_object.cutoff_mfcc,cutoff_spectogram = conf_object.cutoff_spectogram,
-                                            isTraining = False,base_chkpoint_dir= base_checkpoint_dir,label_count= num_labels,labels_meta_file=conf_object.label_meta_file_path
-                                            ,use_nfft=conf_object.use_nfft)
+            train_files_count = aed.create_bottlenecks_cache(file_dir=conf_object.train_directory,bottleneck_input_dir=conf_object.train_bottleneck_dir,conf_object = conf_object)
 
 
 
             print('Creating bottleneck cache batch for train data')
-            bottleneck_batches_train_dir = input_raw.create_randomized_bottleneck_batches(file_dir = conf_object.train_bottleneck_dir,label_count = num_labels,batch_size = conf_object.batch_size)
+            bottleneck_batches_train_dir = input_raw.create_randomized_bottleneck_batches(file_dir = conf_object.train_bottleneck_dir,conf_object = conf_object)
             print('Created bottleneck cache batch for train data in folder:' + bottleneck_batches_train_dir)
 
             with open (bottleneck_batches_train_dir + 'train_count.txt','w') as wf:
@@ -174,11 +147,10 @@ def create_train_bottleneck_batches(conf_object,num_labels):
 
             print('Creating bottleneck cache files for validation data in folder:' + conf_object.validate_bottleneck_dir)
 
-            valid_file_count = aed.create_bottlenecks_cache(file_dir = conf_object.validate_directory,bottleneck_input_dir = conf_object.validate_bottleneck_dir,ncep=conf_object.ncep,nfft=conf_object.nfft,cutoff_mfcc = conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,isTraining=False,
-                                            base_chkpoint_dir = base_checkpoint_dir,label_count = num_labels,labels_meta_file=conf_object.label_meta_file_path,use_nfft=conf_object.use_nfft)
+            valid_file_count = aed.create_bottlenecks_cache(file_dir = conf_object.validate_directory,bottleneck_input_dir = conf_object.validate_bottleneck_dir,conf_object = conf_object)
 
             print('Creating bottleneck cache batch for train data')
-            bottleneck_batched_valid_dir = input_raw.create_randomized_bottleneck_batches(file_dir = conf_object.validate_bottleneck_dir,label_count=num_labels,batch_size=conf_object.batch_size)
+            bottleneck_batched_valid_dir = input_raw.create_randomized_bottleneck_batches(file_dir = conf_object.validate_bottleneck_dir,conf_object = conf_object)
             print('Created bottleneck cache batch for validation data in folder:' + bottleneck_batched_valid_dir)
 
 
@@ -203,28 +175,28 @@ def create_train_bottleneck_batches(conf_object,num_labels):
 def run_validations(conf_object):
 
     if (not conf_object.do_transfer_training and not conf_object.do_scratch_training):
-        print ('You must either do transfer or scratch learning, my son...you cannot do neither')
-        raise Exception('You must either do transfer or scratch learning, my son...you cannot do neither')
+        print ('You must either do transfer or scratch learning..you cannot do neither')
+        raise Exception('You must either do transfer or scratch learning...you cannot do neither')
     elif (conf_object.do_transfer_training and conf_object.do_scratch_training):
-        print ('You cannot do both scratch and transfer learning simultaneously, my son')
-        raise Exception('You cannot do both scratch and transfer learning simultaneously, my son')
+        print ('You cannot do both scratch and transfer learning simultaneously')
+        raise Exception('You cannot do both scratch and transfer learning simultaneously')
     elif (conf_object.label_meta_file_path.strip() == ''):
-        print('You must specify a label meta file, my son')
-        raise Exception('You must specify a label meta file, my son')
+        print('You must specify a label meta file')
+        raise Exception('You must specify a label meta file')
     elif (conf_object.do_scratch_training):
         if(conf_object.train_directory.strip() == ''):
-            print ('You must specify a training directory with wav files for scratch training, my son')
-            raise Exception('You must specify a training directory with wav files for scratch training, my son')
+            print ('You must specify a training directory with wav files for scratch training')
+            raise Exception('You must specify a training directory with wav files for scratch training')
         elif (conf_object.validate_directory.strip() == ''):
-            print('You must specify a validation directory with wav files for scratch training, my son')
-            raise Exception('You must specify a validation directory with wav files for scratch training, my son')
+            print('You must specify a validation directory with wav files for scratch training')
+            raise Exception('You must specify a validation directory with wav files for scratch training')
     elif (conf_object.do_transfer_training):
         if (conf_object.train_bottleneck_dir.strip() == ''):
-            print('You must specify a training directory with wav files for transfer learning, my son')
-            raise Exception('You must specify a training directory with wav files for transfer learning, my son')
+            print('You must specify a training directory with wav files for transfer learning')
+            raise Exception('You must specify a training directory with wav files for transfer learning')
         if (conf_object.validate_bottleneck_dir.strip() == ''):
-            print('You must specify a validation directory with wav files for transfer learning, my son')
-            raise Exception('You must specify a validation directory with wav files for transfer learning, my son')
+            print('You must specify a validation directory with wav files for transfer learning')
+            raise Exception('You must specify a validation directory with wav files for transfer learning')
 
 
 def main():
@@ -242,16 +214,16 @@ def main():
     ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     batch_size = 1000
-    train_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/train/'
-    validate_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/validate/'
-    test_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
-    train_bottleneck_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles/'
-    validate_bottleneck_dir = '/home/nitin/Desktop/tensorflow_speech_dataset/xferfiles_valid/'
+    train_directory = '/home/ubuntu/Desktop/vggish/train/'
+    validate_directory = '/home/ubuntu/Desktop/vggish/valid/'
+    test_directory = '/home/ubuntu/Desktop/vggish/test'
+    train_bottleneck_dir = '/home/ubuntu/Desktop/vggish/xferfiles/'
+    validate_bottleneck_dir = '/home/ubuntu/Desktop/vggish/xferfiles_valid/'
     test_bottleneck_dir = 'x'
-    checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
-    label_meta_file_path = '/home/nitin/Desktop/tensorflow_speech_dataset/labels_meta/labels_meta.txt'
-    do_scratch_training = False
-    do_transfer_training = True
+    checkpoint_base_dir = '/home/ubuntu/Desktop/aws_habits/FMSG_Habits/checkpoints/'
+    label_meta_file_path = '/home/ubuntu/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
+    do_scratch_training = True
+    do_transfer_training = False
     number_cepstrums = 13
     nfft_value = 512 # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
     regenerate_training_inputs = False
@@ -260,6 +232,7 @@ def main():
     cutoff_mfcc = 99
     use_nfft = False
     num_epochs = 100
+    is_training = True
 
     conf_object = Configuration(train_directory=train_directory,validate_directory=validate_directory,test_directory=test_directory,train_bottleneck_dir=train_bottleneck_dir,
                        validate_bottleneck_dir=validate_bottleneck_dir,test_bottleneck_dir = test_bottleneck_dir,
@@ -269,15 +242,21 @@ def main():
                         ,num_epochs = num_epochs
                         )
 
+    aed = AudioEventDetection()
+
     run_validations(conf_object)
 
     # Read the labels meta file
+    common_helpers = CommonHelpers()
     num_labels,label_dict = common_helpers.get_labels_and_count(label_file=conf_object.label_meta_file_path)
+
+    conf_object.num_labels = num_labels
+    conf_object.labels_dict = label_dict
 
     if (conf_object.do_scratch_training):
 
-        train_out_folder, valid_out_folder, train_count, valid_count = create_numpy_train_batches(conf_object = conf_object,num_labels=num_labels)
-        test_out_folder, test_count = create_numpy_test_batches(conf_object=conf_object,num_labels = num_labels)
+        train_out_folder, valid_out_folder, train_count, valid_count = create_numpy_train_batches(conf_object = conf_object)
+        test_out_folder, test_count = create_numpy_test_batches(conf_object=conf_object)
 
 
         # Start training
@@ -300,20 +279,17 @@ def main():
                 shutil.rmtree(base_checkpoint_dir)
             os.makedirs(base_checkpoint_dir)
 
-            aed.base_train(ncep=number_cepstrums,nfft=nfft,max_len=max_len,label_count=num_labels,isTraining=True,batch_size=batch_size,
-                            train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count
-                            ,chkpoint_dir = base_checkpoint_dir,use_nfft = False,epochs=conf_object.num_epochs)
+            aed.base_train(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count,conf_object = conf_object)
 
     if (conf_object.do_transfer_training):
 
         bottleneck_batches_train_dir, bottleneck_batched_valid_dir, train_files_count, \
-        valid_file_count = create_train_bottleneck_batches(conf_object=conf_object,num_labels=num_labels)
+        valid_file_count = create_train_bottleneck_batches(conf_object=conf_object)
 
         # Retrain the weights for just the softmax layer, given the bottleneck inputs
         aed.retrain(train_bottleneck_dir=bottleneck_batches_train_dir,
-                      valid_bottleneck_dir = bottleneck_batched_valid_dir, label_count = num_labels,ncep=conf_object.ncep,nfft=conf_object.nfft
-                      ,cutoff_mfcc=conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,isTraining = False,batch_size=conf_object.batch_size,
-                      n_count = train_files_count,n_valid_count = valid_file_count,epochs=conf_object.num_epochs,chkpoint_dir=conf_object.checkpoint_dir,use_nfft=conf_object.use_nfft
+                      valid_bottleneck_dir = bottleneck_batched_valid_dir,n_count = train_files_count,n_valid_count = valid_file_count,
+                      conf_object = conf_object
                       )
 
 

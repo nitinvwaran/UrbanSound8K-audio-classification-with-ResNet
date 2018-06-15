@@ -2,6 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/habits/habit.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/habit.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/habits/habits_configuration.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/habits_configuration.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/habits/inputs_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/inputs_2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/habits/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/model.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -13,14 +17,37 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="model.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="16184">
-              <caret line="952" column="100" selection-start-line="952" selection-start-column="100" selection-end-line="952" selection-end-column="100" />
+            <state relative-caret-position="-102">
+              <caret line="24" selection-start-line="24" selection-end-line="24" />
               <folding>
-                <element signature="e#0#11#0" expanded="true" />
+                <element signature="e#0#23#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="resnet_model.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/resnet/resnet_model.py">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file leaf-file-name="imagenet_main.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/resnet/imagenet_main.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="5049">
+              <caret line="311" column="66" selection-start-line="311" selection-start-column="66" selection-end-line="311" selection-end-column="66" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="resnet_run_loop.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/resnet/resnet_run_loop.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3519">
+              <caret line="223" column="21" selection-start-line="223" selection-start-column="10" selection-end-line="223" selection-end-column="21" />
             </state>
           </provider>
         </entry>
@@ -37,8 +64,8 @@
       <file leaf-file-name="inputs_2.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2941">
-              <caret line="173" column="35" selection-start-line="173" selection-start-column="35" selection-end-line="173" selection-end-column="35" />
+            <state relative-caret-position="136">
+              <caret line="182" column="50" selection-start-line="182" selection-start-column="50" selection-end-line="182" selection-end-column="50" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -46,11 +73,14 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="habit.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="habit.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/habits/habit.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1048">
-              <caret line="429" column="5" selection-start-line="429" selection-start-column="5" selection-end-line="429" selection-end-column="5" />
+            <state relative-caret-position="-1093">
+              <caret line="204" column="55" lean-forward="true" selection-start-line="204" selection-start-column="55" selection-end-line="204" selection-end-column="55" />
+              <folding>
+                <element signature="e#0#9#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -58,8 +88,8 @@
       <file leaf-file-name="habits_configuration.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="85">
-              <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+            <state relative-caret-position="561">
+              <caret line="33" selection-start-line="33" selection-end-line="33" />
             </state>
           </provider>
         </entry>
@@ -67,7 +97,7 @@
       <file leaf-file-name="habits_inference.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1105">
+            <state relative-caret-position="687">
               <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
@@ -99,7 +129,6 @@
       <find>unk_test</find>
       <find>create_bott</find>
       <find>cache</find>
-      <find>retrain</find>
       <find>build</find>
       <find>create_</find>
       <find>retrain(</find>
@@ -112,6 +141,12 @@
       <find>Training batch</find>
       <find>Count of bottleneck</find>
       <find>softmax</find>
+      <find>build_final_layer_graph</find>
+      <find>get_checkpoint_file</find>
+      <find>retrain</find>
+      <find>randomi</find>
+      <find>create_randomized_bottleneck_batches</find>
+      <find>create_bottlenecks_cache</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -136,19 +171,19 @@
         <option value="$PROJECT_DIR$/habits/__init__.py" />
         <option value="$PROJECT_DIR$/habits_configuration.py" />
         <option value="$PROJECT_DIR$/habits_inference.py" />
-        <option value="$PROJECT_DIR$/habits/habits_configuration.py" />
         <option value="$PROJECT_DIR$/habits/habits_inference.py" />
-        <option value="$PROJECT_DIR$/habits/habit.py" />
-        <option value="$PROJECT_DIR$/habits/inputs_2.py" />
         <option value="$PROJECT_DIR$/habits/model.py" />
+        <option value="$PROJECT_DIR$/habits/inputs_2.py" />
+        <option value="$PROJECT_DIR$/habits/habits_configuration.py" />
+        <option value="$PROJECT_DIR$/habits/habit.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="1" />
     <option name="y" value="25" />
-    <option name="width" value="1263" />
-    <option name="height" value="1000" />
+    <option name="width" value="639" />
+    <option name="height" value="455" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -167,11 +202,6 @@
             <path>
               <item name="habits" type="b2602c69:ProjectViewProjectNode" />
               <item name="habits" type="462c0819:PsiDirectoryNode" />
-              <item name="audioset" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="habits" type="b2602c69:ProjectViewProjectNode" />
-              <item name="habits" type="462c0819:PsiDirectoryNode" />
               <item name="habits" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -180,6 +210,11 @@
               <item name="habits" type="462c0819:PsiDirectoryNode" />
               <item name="labels_meta" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="habits" type="b2602c69:ProjectViewProjectNode" />
+              <item name="habits" type="462c0819:PsiDirectoryNode" />
+              <item name="resnet" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
@@ -187,7 +222,7 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../untitled" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RecentsManager">
@@ -309,27 +344,27 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="67" y="25" width="2493" height="1295" extended-state="6" />
+    <frame x="67" y="25" width="1717" height="1095" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.08785425" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.19775678" />
       <window_info anchor="bottom" id="TODO" order="5" />
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32977587" />
       <window_info anchor="right" x="67" y="55" width="1717" height="1065" id="Run" order="3" weight="0.16636744" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Python Console" order="8" weight="0.32870865" />
       <window_info id="Structure" order="1" sideWeight="0.50053364" side_tool="true" weight="0.1466188" />
-      <window_info anchor="bottom" id="Terminal" order="9" visible="true" weight="0.14335972" />
+      <window_info anchor="bottom" id="Terminal" order="9" visible="true" weight="0.17502668" />
       <window_info anchor="bottom" id="Debug" order="2" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="4" weight="0.4" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Cvs" order="3" weight="0.25" />
       <window_info anchor="bottom" id="Messages" order="6" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Inspection" order="4" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="3" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32977587" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
@@ -337,16 +372,151 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="3" />
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/habits/habit.py</url>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+      <option name="time" value="4" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1003">
+          <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3910">
+          <caret line="238" column="19" selection-start-line="238" selection-start-column="19" selection-end-line="238" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15912">
+          <caret line="945" column="23" selection-start-line="945" selection-start-column="23" selection-end-line="945" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/setup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="204">
+          <caret line="12" selection-start-line="12" selection-end-line="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habit.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7191">
+          <caret line="429" column="5" selection-start-line="429" selection-start-column="5" selection-end-line="429" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1003">
+          <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4046">
+          <caret line="238" column="19" selection-start-line="238" selection-start-column="19" selection-end-line="238" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15912">
+          <caret line="945" column="23" selection-start-line="945" selection-start-column="23" selection-end-line="945" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/setup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="204">
+          <caret line="12" selection-start-line="12" selection-end-line="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habit.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7191">
+          <caret line="429" column="5" selection-start-line="429" selection-start-column="5" selection-end-line="429" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1003">
+          <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4046">
+          <caret line="238" column="19" selection-start-line="238" selection-start-column="19" selection-end-line="238" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/habits/model.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4148">
           <caret line="244" selection-start-line="244" selection-end-line="244" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -397,7 +567,7 @@
         <state relative-caret-position="8580">
           <caret line="580" column="35" selection-start-line="580" selection-start-column="35" selection-end-line="580" selection-end-column="35" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -431,7 +601,7 @@
         <state relative-caret-position="6840">
           <caret line="463" column="16" selection-start-line="463" selection-start-column="16" selection-end-line="463" selection-end-column="16" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -458,7 +628,7 @@
         <state relative-caret-position="2280">
           <caret line="157" column="71" selection-start-line="157" selection-start-column="71" selection-end-line="157" selection-end-column="71" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -485,7 +655,7 @@
         <state relative-caret-position="1545">
           <caret line="105" column="29" selection-start-line="105" selection-start-column="29" selection-end-line="105" selection-end-column="29" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -505,7 +675,7 @@
         <state relative-caret-position="1545">
           <caret line="105" column="29" lean-forward="true" selection-start-line="105" selection-start-column="29" selection-end-line="105" selection-end-column="29" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -527,26 +697,6 @@
     <entry file="file://$PROJECT_DIR$/habits/habits.py" />
     <entry file="file://$PROJECT_DIR$/habits/inputs.py" />
     <entry file="file://$PROJECT_DIR$/checkpoints/checkpoint" />
-    <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1105">
-          <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
-          <folding>
-            <element signature="e#0#9#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2941">
-          <caret line="173" column="35" selection-start-line="173" selection-start-column="35" selection-end-line="173" selection-end-column="35" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/setup.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="204">
@@ -554,26 +704,66 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/resnet/imagenet_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="5049">
+          <caret line="311" column="66" selection-start-line="311" selection-start-column="66" selection-end-line="311" selection-end-column="66" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/resnet/resnet_run_loop.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3519">
+          <caret line="223" column="21" selection-start-line="223" selection-start-column="10" selection-end-line="223" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/resnet/resnet_model.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-102">
+          <caret line="24" selection-start-line="24" selection-end-line="24" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/habits_inference.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="687">
+          <caret line="65" column="101" selection-start-line="65" selection-start-column="28" selection-end-line="65" selection-end-column="101" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/habits/habits_configuration.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="85">
-          <caret line="5" column="17" selection-start-line="5" selection-start-column="17" selection-end-line="5" selection-end-column="17" />
+        <state relative-caret-position="561">
+          <caret line="33" selection-start-line="33" selection-end-line="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/habits/inputs_2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="136">
+          <caret line="182" column="50" selection-start-line="182" selection-start-column="50" selection-end-line="182" selection-end-column="50" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/habit.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1048">
-          <caret line="429" column="5" selection-start-line="429" selection-start-column="5" selection-end-line="429" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/habits/model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="16184">
-          <caret line="952" column="100" selection-start-line="952" selection-start-column="100" selection-end-line="952" selection-end-column="100" />
+        <state relative-caret-position="-1093">
+          <caret line="204" column="55" lean-forward="true" selection-start-line="204" selection-start-column="55" selection-end-line="204" selection-end-column="55" />
           <folding>
-            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#0#9#0" expanded="true" />
           </folding>
         </state>
       </provider>

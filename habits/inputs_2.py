@@ -218,7 +218,8 @@ class InputRaw(object):
 
         return file_dir_out
 
-    def create_numpy_batches(self,file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512,use_nfft = True):
+    def create_numpy_batches(self,conf_object)
+                             #file_dir,out_dir, label_count, label_file, cutoff_mfcc, cutoff_spectogram, batch_size = 500, ncep = 13, nfft = 512,use_nfft = True):
 
         ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
         ' Creates numpy batches for scratch training '
@@ -226,6 +227,19 @@ class InputRaw(object):
         ' Should only be needed for baselining, given bottlenecks are being used for xfer learning'
         ' bottlenecks are created using another method'
         ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+        file_dir=conf_object.train_directory,
+        out_dir=conf_object.train_directory,
+        label_count=num_labels,
+        label_file=conf_object.label_meta_file_path,
+        cutoff_mfcc=conf_object.cutoff_mfcc,
+        cutoff_spectogram=conf_object.cutoff_spectogram,
+        batch_size=conf_object.batch_size,
+        ncep=conf_object.ncep,
+        nfft=conf_object.nfft,
+        use_nfft=conf_object.use_nfft
+
 
         common_helpers = CommonHelpers()
         os.chdir(file_dir)
@@ -282,7 +296,7 @@ if (__name__ == '__main__'):
     labels_meta_file = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
     inputs_vgg = InputsVGG(vgg_chkpt, labels_meta_file)
 
-    in_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train/'
+    in_dir = ''
     out_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train_batch/'
     embed_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train_embedding/'
     embed_batch_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train_embedding/numpy_batch/'

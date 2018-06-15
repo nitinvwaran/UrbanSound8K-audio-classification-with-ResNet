@@ -3,7 +3,8 @@ class Configuration(object):
                  validate_bottleneck_dir, test_bottleneck_dir, checkpoint_dir, number_cepstrums, nfft_value,
                  label_meta_file_path, do_scratch_training=False, do_transfer_training=False, cutoff_spectogram=99,
                  cutoff_mfcc=99, regenerate_training_inputs=False, regenerate_test_inputs=False, batch_size=1000,use_nfft =True
-                 ,num_epochs=20,learning_rate = 0.001,dropout_prob = 0.5,use_graph=False):
+                 ,num_epochs=20,learning_rate = 0.001,dropout_prob = 0.5,use_graph=False,num_labels = -1,labels_dict = {},is_training=True):
+        self.num_labels = num_labels
         self.train_directory = train_directory
         self.validate_directory = validate_directory
         self.test_directory = test_directory
@@ -29,5 +30,8 @@ class Configuration(object):
         self.learning_rate = learning_rate
         self.dropout_prob = dropout_prob
         self.use_graph = use_graph
+        self.labels_dict = labels_dict
+
+        self.is_training = is_training
 
 

@@ -1,4 +1,3 @@
-import math
 import tensorflow as tf
 import numpy as np
 import habits.inputs_2 as inp
@@ -8,9 +7,39 @@ import glob
 import uuid
 from tensorflow.python.framework import graph_util
 from audioset import vggish_slim, vggish_params
-
+from resnet.resnet_model import _building_block_v1,_building_block_v2,_bottleneck_block_v1,_bottleneck_block_v2,batch_norm, \
+    conv2d_fixed_padding,block_layer
+import abc
 slim = tf.contrib.slim
 
+
+class ModelHelper():
+
+    def get_checkpoint_file(self, checkpoint_dir):
+        chkpoint_file_path = ''
+        with open(checkpoint_dir + 'checkpoint', 'r') as fchk:
+            for line in fchk.readlines():
+                chkpoint_file_path = line.split(':')[1].strip().replace('"', '')
+                break
+
+        return chkpoint_file_path
+
+
+
+class AudioEventSuper(object):
+
+    def __init__(self,conf_object):
+        self.conf_object = conf_object
+
+    @abc.abstractmethod
+    def build_graph(self):
+        'Builds the graph'
+        return
+
+    @abc.abstractmethod
+    def build_final_layer_graph(self,bottleneck_input):
+        'Builds last layer for transfer learning'
+        return
 
 class AudioEventDetectionVGG():
 
@@ -19,12 +48,10 @@ class AudioEventDetectionVGG():
         self.vggish_chkpt_file = vggish_chkpt_file
 
     def build_graph(self):
-
         embeddings = vggish_slim.define_vggish_slim(training=self.train_vggish)
         return embeddings
 
     def build_final_layer_graph(self, label_count, bottleneck_input):
-
         num_fc_units = 20
         fc = slim.fully_connected(bottleneck_input, num_fc_units)
 
@@ -39,11 +66,7 @@ class AudioEventDetectionVGG():
 
     def retrain(self, label_count, num_epochs, batch_size, train_batch_dir, valid_batch_dir, n_count, n_valid_count):
 
-        print(train_batch_dir)
-        print(valid_batch_dir)
-
         with tf.Graph().as_default(), tf.Session() as sess:
-
             'What is interesting is that google model allows the loaded weights from checkpoint'
             'to not be trained, by setting the flag to false'
             'This allows us to defined the whole model here, train just the new layers, and ' \
@@ -53,7 +76,6 @@ class AudioEventDetectionVGG():
             logits, sig_logits, ground_truth = self.build_final_layer_graph(label_count, bottleneck_input)
 
             with tf.name_scope('cross_entropy_loss'):
-
                 labels = tf.placeholder(dtype=tf.float32, shape=[None, label_count], name="labels")
 
                 cross_entropy_mean = tf.losses.softmax_cross_entropy(
@@ -96,67 +118,69 @@ class AudioEventDetectionVGG():
             # loss_tensor = sess.graph.get_tensor_by_name('cross_entropy_loss/loss_op:0')
             # training_op = sess.graph.get_operation_by_name('train/train_op')
 
-            # dataset = tf.data.Dataset.from_tensor_slices((features_tensor,labels))
-            # dataset = dataset.batch(batch_size= batch_size)
+            dataset = tf.data.Dataset.from_tensor_slices((features_tensor, labels))
+            dataset = dataset.batch(batch_size=batch_size)
 
-            # val_dataset = tf.data.Dataset.from_tensor_slices((features_tensor,labels))
-            # val_dataset = val_dataset.batch(batch_size = batch_size)
+            val_dataset = tf.data.Dataset.from_tensor_slices((features_tensor, labels))
+            val_dataset = val_dataset.batch(batch_size=batch_size)
 
-            # iterator = dataset.make_initializable_iterator()
-            # val_iterator = val_dataset.make_initializable_iterator()
+            iterator = dataset.make_initializable_iterator()
+            val_iterator = val_dataset.make_initializable_iterator()
 
             for i in range(1, num_epochs + 1):
-
                 total_conf_matrix = None
 
-                j = batch_size
-                while (j <= n_count):
+                # j = batch_size
+                # while (j <= n_count):
 
-                    npInputs = np.load(train_batch_dir + 'vgg_embedding_batch' + str(j) + '.npy')
-                    npLabels = np.load(train_batch_dir + 'vgg_embedding_batch_label_hot' + str(j) + '.npy')
-                    npLabelsTruth = np.load(train_batch_dir + 'vgg_embedding_batch_label' + str(j) + '.npy')
+                npInputs = np.load(train_batch_dir + 'vgg_embedding_batch.npy')
+                npLabels = np.load(train_batch_dir + 'vgg_embedding_batch_label_hot.npy')
 
-                    print('Batch is:' + str(j))
-                    # print (npInputs.shape)
-                    # print (npLabels.shape)
+                # npInputs = np.load(train_batch_dir + 'vgg_embedding_batch' + str(j) + '.npy')
+                # npLabels = np.load(train_batch_dir + 'vgg_embedding_batch_label_hot' + str(j) + '.npy')
+                # npLabelsTruth = np.load(train_batch_dir + 'vgg_embedding_batch_label' + str(j) + '.npy')
 
-                    # sess.run(iterator.initializer,feed_dict={
-                    #        features_tensor: npInputs,
-                    #        labels: npLabels
-                    #   })
+                # print ('Batch is:' + str(j))
+                # print (npInputs.shape)
+                # print (npLabels.shape)
 
-                    train, loss, sigmoid, conf_matrix = sess.run(
-                        [
-                            training_op, loss_tensor, sig_logits, confusion_matrix
-                        ],
-                        feed_dict={
-                            features_tensor: npInputs,
-                            labels: npLabels,
-                            ground_truth: npLabelsTruth
+                sess.run(iterator.initializer, feed_dict={
+                    features_tensor: npInputs,
+                    labels: npLabels
+                })
 
-                        }
-                    )
-                    # print('Train Labels:' + str(npLabelsTruth))
-                    # print('Train Labels Hot:' + str(npLabels))
-                    # print('The train sigmoid is:' + str(sigmoid))
+                train, loss, sigmoid, conf_matrix = sess.run(
+                    [
+                        training_op, loss_tensor, sig_logits, confusion_matrix
+                    ],
+                    feed_dict={
+                        features_tensor: npInputs,
+                        labels: npLabels,
+                        # ground_truth:npLabelsTruth
 
-                    if total_conf_matrix is None:
-                        total_conf_matrix = conf_matrix
-                    else:
-                        total_conf_matrix += conf_matrix
+                    }
+                )
+                # print('Train Labels:' + str(npLabelsTruth))
+                # print('Train Labels Hot:' + str(npLabels))
+                # print('The train sigmoid is:' + str(sigmoid))
 
-                    if (j == n_count):
-                        break
+                # if total_conf_matrix is None:
+                #    total_conf_matrix = conf_matrix
+                # else:
+                #    total_conf_matrix += conf_matrix
 
-                    if (j + batch_size > n_count):
-                        j = n_count
-                    else:
-                        j += batch_size
+                # if (j == n_count):
+                #    break
+
+                # if ( j + batch_size > n_count):
+                #    j = n_count
+                # else:
+                #    j += batch_size
 
                 print('Epoch:' + str(i))
-                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
-                true_pos_train = np.sum(np.diag(total_conf_matrix))
-                all_pos_train = np.sum(total_conf_matrix)
+                print('Training Confusion Matrix:' + '\n' + str(conf_matrix))
+                true_pos_train = np.sum(np.diag(conf_matrix))
+                all_pos_train = np.sum(conf_matrix)
                 print(' Train Accuracy is: ' + str(float(true_pos_train / all_pos_train)))
 
                 # Save after every 10 epochs
@@ -168,61 +192,150 @@ class AudioEventDetectionVGG():
                 # Validation set reporting
                 # print ('Validation on batch:' + str(v))
 
-                v = batch_size
+                # v = batch_size
 
-                if (v > n_valid_count):
-                    v = n_valid_count
+                # if (v > n_valid_count):
+                #    v = n_valid_count
 
-                valid_conf_matrix = None
-                while (v <= n_valid_count):
+                # valid_conf_matrix = None
+                # while (v <= n_valid_count):
 
-                    npInputsVal = np.load(valid_batch_dir + 'vgg_embedding_batch' + str(v) + '.npy')
-                    npLabelsVal = np.load(valid_batch_dir + 'vgg_embedding_batch_label_hot' + str(v) + '.npy')
-                    npLabelsValTruth = np.load(valid_batch_dir + 'vgg_embedding_batch_label' + str(v) + '.npy')
+                npInputsVal = np.load(valid_batch_dir + 'vgg_embedding_batch.npy')
+                npLabelsVal = np.load(valid_batch_dir + 'vgg_embedding_batch_label_hot.npy')
 
-                    print('Validation batch:' + str(v))
-                    # print (npInputsVal.shape)
-                    # print (npLabelsVal.shape)
+                #npInputsVal = np.load(valid_batch_dir + 'vgg_embedding_batch' + str(v) + '.npy')
+                #npLabelsVal = np.load(valid_batch_dir + 'vgg_embedding_batch_label_hot' + str(v) + '.npy')
+                #npLabelsValTruth = np.load(valid_batch_dir + 'vgg_embedding_batch_label' + str(v) + '.npy')
 
-                    # sess.run(val_iterator.initializer,feed_dict={
-                    #        features_tensor: npInputsVal,
-                    #        labels: npLabelsVal,
-                    #    })
+                #print('Validation batch:' + str(v))
+                # print (npInputsVal.shape)
+                # print (npLabelsVal.shape)
 
-                    sigmoid_val, conf_matrix = sess.run(
-                        [sig_logits, confusion_matrix],
-                        feed_dict={
-                            features_tensor: npInputsVal,
-                            labels: npLabelsVal,
-                            ground_truth: npLabelsValTruth
-                        }
-                    )
+                # sess.run(val_iterator.initializer,feed_dict={
+                #        features_tensor: npInputsVal,
+                #        labels: npLabelsVal,
+                #    })
 
-                    # print('Val Labels:' + str(npLabelsValTruth))
-                    # print('Val Labels Hot:' + str(npLabelsVal))
+                sigmoid_val, val_conf_matrix = sess.run(
+                    [sig_logits, confusion_matrix],
+                    feed_dict={
+                        features_tensor: npInputsVal,
+                        labels: npLabelsVal,
+                        #ground_truth: npLabelsValTruth
+                    }
+                )
 
-                    # print('The validation sigmoid is:' + str(sigmoid_val))
+                # print('Val Labels:' + str(npLabelsValTruth))
+                # print('Val Labels Hot:' + str(npLabelsVal))
 
-                    if (valid_conf_matrix is None):
-                        valid_conf_matrix = conf_matrix
-                    else:
-                        valid_conf_matrix += conf_matrix
+                # print('The validation sigmoid is:' + str(sigmoid_val))
 
-                    if (v == n_valid_count):
-                        break
+                # if (valid_conf_matrix is None):
+                #    valid_conf_matrix = conf_matrix
+                # else:
+                #    valid_conf_matrix += conf_matrix
 
-                    if (v + batch_size > n_valid_count):
-                        v = n_valid_count
-                    else:
-                        v += batch_size
+                # if (v == n_valid_count):
+                #    break
 
-                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
-                true_pos = np.sum(np.diag(valid_conf_matrix))
-                all_pos = np.sum(valid_conf_matrix)
+                # if (v + batch_size > n_valid_count):
+                #    v = n_valid_count
+                # else:
+                #    v += batch_size
+
+                print('Validation Confusion Matrix: ' + '\n' + str(val_conf_matrix))
+                true_pos = np.sum(np.diag(val_conf_matrix))
+                all_pos = np.sum(val_conf_matrix)
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
 
+
+
+
+
 class AudioEventDetection(object):
+
+    def __init__(self,resnet_size,bottleneck, num_classes, num_filters,
+               kernel_size,
+               conv_stride, first_pool_size, first_pool_stride,
+               block_sizes, block_strides,
+               final_size, resnet_version=2, data_format=None,
+                dtype=tf.float32):
+
+        _BATCH_NORM_DECAY = 0.997
+        _BATCH_NORM_EPSILON = 1e-5
+        DEFAULT_VERSION = 2
+        DEFAULT_DTYPE = tf.float32
+        CASTABLE_TYPES = (tf.float16,)
+        ALLOWED_TYPES = (DEFAULT_DTYPE,) + CASTABLE_TYPES
+
+        """Creates a model for classifying an image.
+            Args:
+              resnet_size: A single integer for the size of the ResNet model.
+              bottleneck: Use regular blocks or bottleneck blocks.
+              num_classes: The number of classes used as labels.
+              num_filters: The number of filters to use for the first block layer
+                of the model. This number is then doubled for each subsequent block
+                layer.
+              kernel_size: The kernel size to use for convolution.
+              conv_stride: stride size for the initial convolutional layer
+              first_pool_size: Pool size to be used for the first pooling layer.
+                If none, the first pooling layer is skipped.
+              first_pool_stride: stride size for the first pooling layer. Not used
+                if first_pool_size is None.
+              block_sizes: A list containing n values, where n is the number of sets of
+                block layers desired. Each value should be the number of blocks in the
+                i-th set.
+              block_strides: List of integers representing the desired stride size for
+                each of the sets of block layers. Should be same length as block_sizes.
+              final_size: The expected size of the model after the second pooling.
+              resnet_version: Integer representing which version of the ResNet network
+                to use. See README for details. Valid values: [1, 2]
+              data_format: Input format ('channels_last', 'channels_first', or None).
+                If set to None, the format is dependent on whether a GPU is available.
+              dtype: The TensorFlow dtype to use for calculations. If not specified
+                tf.float32 is used.
+            Raises:
+              ValueError: if invalid version is selected.
+            """
+        self.resnet_size = resnet_size
+
+        if not data_format:
+            data_format = (
+                'channels_first' if tf.test.is_built_with_cuda() else 'channels_last')
+
+        self.resnet_version = resnet_version
+        if resnet_version not in (1, 2):
+            raise ValueError(
+                'Resnet version should be 1 or 2. See README for citations.')
+
+        self.bottleneck = bottleneck
+        if bottleneck:
+            if resnet_version == 1:
+                self.block_fn = _bottleneck_block_v1
+            else:
+                self.block_fn = _bottleneck_block_v2
+        else:
+            if resnet_version == 1:
+                self.block_fn = _building_block_v1
+            else:
+                self.block_fn = _building_block_v2
+
+        if dtype not in ALLOWED_TYPES:
+            raise ValueError('dtype must be one of: {}'.format(ALLOWED_TYPES))
+
+        self.data_format = data_format
+        self.num_classes = num_classes
+        self.num_filters = num_filters
+        self.kernel_size = kernel_size
+        self.conv_stride = conv_stride
+        self.first_pool_size = first_pool_size
+        self.first_pool_stride = first_pool_stride
+        self.block_sizes = block_sizes
+        self.block_strides = block_strides
+        self.final_size = final_size
+        self.dtype = dtype
+        self.pre_activation = resnet_version == 2
 
     def build_final_layer_graph(self, label_count, isTraining, bottleneck_input):
 
@@ -248,17 +361,78 @@ class AudioEventDetection(object):
         # The final result - a softmax can be applied to this for inference
         return final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias
 
+
+
+
+    def build_graph(self,fingerprint_input, dropout_prob, ncep, nfft, max_len, isTraining, use_nfft=True):
+
+        if (use_nfft):  # nfft == spectogram
+            input_frequency_size = nfft
+        else:
+            input_frequency_size = ncep
+
+        input_time_size = max_len
+
+        with tf.variable_scope('layer_resnet',reuse=tf.AUTO_REUSE):
+            fingerprint_4d = tf.reshape(fingerprint_input,
+                                        [-1, input_time_size, input_frequency_size, 1])
+
+            # Channels First
+            fingerprint_t = tf.transpose(fingerprint_4d,[0,3,1,2])
+
+            inputs = conv2d_fixed_padding(
+                inputs=fingerprint_t, filters=self.num_filters, kernel_size=self.kernel_size,
+                strides=self.conv_stride, data_format=self.data_format)
+
+            if self.resnet_version == 1:
+                inputs = batch_norm(inputs, isTraining, self.data_format)
+                inputs = tf.nn.relu(inputs)
+
+            if self.first_pool_size:
+                inputs = tf.layers.max_pooling2d(
+                    inputs=inputs, pool_size=self.first_pool_size,
+                    strides=self.first_pool_stride, padding='SAME',
+                    data_format=self.data_format)
+                inputs = tf.identity(inputs, 'initial_max_pool')
+
+            for i, num_blocks in enumerate(self.block_sizes):
+                num_filters = self.num_filters * (2 ** i)
+                inputs = block_layer(
+                    inputs=inputs, filters=num_filters, bottleneck=self.bottleneck,
+                    block_fn=self.block_fn, blocks=num_blocks,
+                    strides=self.block_strides[i], training=isTraining,
+                    name='block_layer{}'.format(i + 1), data_format=self.data_format)
+
+            # Only apply the BN and ReLU for model that does pre_activation in each
+            # building/bottleneck block, eg resnet V2.
+            if self.pre_activation:
+                inputs = batch_norm(inputs, isTraining, self.data_format)
+                inputs = tf.nn.relu(inputs)
+
+            # The current top layer has shape
+            # `batch_size x pool_size x pool_size x final_size`.
+            # ResNet does an Average Pooling layer over pool_size,
+            # but that is the same as doing a reduce_mean. We do a reduce_mean
+            # here because it performs better than AveragePooling2D.
+            axes = [2, 3] if self.data_format == 'channels_first' else [1, 2]
+
+            inputs = tf.reduce_mean(inputs, axes, keepdims=True)
+            inputs = tf.reshape(inputs, [-1, self.final_size])
+            inputs = tf.layers.dense(inputs=inputs, units=self.num_classes)
+
+            inputs = tf.identity(inputs, 'final_dense')
+            return inputs
+
+
+    '''
     def build_graph(self, fingerprint_input, dropout_prob, ncep, nfft, max_len, isTraining, use_nfft=True):
 
-        ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-        Contains the core NN Architecture of the class. This can be replaced with any other architecture coded from scratch, 
-        Or a pre-trained model from which the relevant bottleneck tensors,  are extracted and fed
-        to the final layer graph function above for transfer learning / retraining
-        Extracting tensors at a layer that is not the bottleneck, will need changes to final layer graph function
-        As more tensors need to be fed to the final layer or the layers before it (depending on retraining judgements)
-
-        The current function is versatile , can take mfcc or spectograms
-        '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+        
+        'Contains the core NN Architecture of the class. This can be replaced with any other architecture coded from scratch,' 
+        'Or a pre-trained model from which the relevant bottleneck tensors,  are extracted and fed'
+        'to the final layer graph function above for transfer learning / retraining'
+        'Extracting tensors at a layer that is not the bottleneck, will need changes to final layer graph function'
+        'As more tensors need to be fed to the final layer or the layers before it (depending on retraining judgements)'
 
         if (use_nfft):  # nfft == spectogram
             input_frequency_size = nfft
@@ -346,6 +520,8 @@ class AudioEventDetection(object):
 
         # The bottleneck tensor is final_fc_input
         return final_fc_input, first_weights, first_bias, first_fc_weights, first_fc_bias, second_fc_weights, second_fc_bias
+        
+    '''
 
     def inference_frozen(self, nparr, frozen_graph):
 
@@ -427,11 +603,16 @@ class AudioEventDetection(object):
                                            name="fingerprint_input")
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
 
+        logits = self.build_graph(fingerprint_input=fingerprint_input,
+                                            dropout_prob=dropout_prob, ncep=ncep, nfft=nfft,
+                                            max_len=max_len, isTraining=isTraining, use_nfft=use_nfft)
+        '''
         bottleneck_input, _, _, _, _, _, _ = self.build_graph(fingerprint_input=fingerprint_input,
                                                               dropout_prob=dropout_prob, ncep=ncep, nfft=nfft,
                                                               max_len=max_len, isTraining=isTraining, use_nfft=use_nfft)
         logits, _, _, _, _ = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                                          bottleneck_input=bottleneck_input)
+                                                       bottleneck_input=bottleneck_input)
+        '''
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
@@ -467,20 +648,12 @@ class AudioEventDetection(object):
         # print ('Softmax predictions are:' + tf.nn.softmax(logits))
         return predictions
 
-    def get_checkpoint_file(self, checkpoint_dir):
 
-        # TODO: common helper class?
-
-        chkpoint_file_path = ''
-        with open(checkpoint_dir + 'checkpoint', 'r') as fchk:
-            for line in fchk.readlines():
-                chkpoint_file_path = line.split(':')[1].strip().replace('"', '')
-                break
-
-        return chkpoint_file_path
 
     def create_bottlenecks_cache(self, file_dir, bottleneck_input_dir, ncep, nfft, cutoff_mfcc, cutoff_spectogram,
                                  isTraining, base_chkpoint_dir, label_count, labels_meta_file, use_nfft=True):
+
+        model_helper = ModelHelper()
 
         ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
         'Creates numpy files on disk for all training data that represents bottleneck transformation (.npy file) for each wav file'
@@ -509,7 +682,7 @@ class AudioEventDetection(object):
         sess = tf.Session()
         sess.run(init)
 
-        base_chkpoint_file_path = self.get_checkpoint_file(base_chkpoint_dir)
+        base_chkpoint_file_path = model_helper.get_checkpoint_file(base_chkpoint_dir)
         print('Base Checkpoint File is:' + base_chkpoint_file_path)
 
         saver = tf.train.import_meta_graph(base_chkpoint_file_path + '.meta', clear_devices=True)
@@ -786,8 +959,8 @@ class AudioEventDetection(object):
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
         print('Creating new complete graph')
-        base_checkpoint_file = self.get_checkpoint_file(checkpoint_dir=chkpoint_dir + 'base_dir/')
-        version_checkpoint_file = self.get_checkpoint_file(checkpoint_dir=retrain_chkpoint_dir)
+        base_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=chkpoint_dir + 'base_dir/')
+        version_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=retrain_chkpoint_dir)
 
         print('Base checkpoint graph is:' + base_checkpoint_file)
         print('Version checkpoint graph is:' + version_checkpoint_file)
@@ -942,9 +1115,9 @@ class AudioEventDetection(object):
 
 
 if __name__ == '__main__':
-    vggish_chkpt_file = '/home/nitin/Desktop/aws_habits/FMSG_Habits/audioset/vggish_model.ckpt'
-    train_batch_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train_batch/numpy_batch/vgg_embedding_batch/'
-    valid_batch_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/valid_batch/numpy_batch/vgg_embedding_batch/'
+    vggish_chkpt_file = '/home/ubuntu/Desktop/aws_habits/FMSG_Habits/audioset/vggish_model.ckpt'
+    train_batch_dir = '/home/ubuntu/Desktop/vggish/train_batch/numpy_batch/vgg_embedding_batch/'
+    valid_batch_dir = '/home/ubuntu/Desktop/vggish/valid_batch/numpy_batch/vgg_embedding_batch/'
     n_count = 6624
     n_valid_count = 2187
 
