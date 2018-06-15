@@ -35,12 +35,12 @@ def create_numpy_train_batches(conf_object):
         # Existing numpy batches will be erased and replaced
         try:
 
-            train_out_folder, train_count = input_raw.create_numpy_batches(conf_object)
+            train_out_folder, train_count = input_raw.create_numpy_batches(file_dir = conf_object.train_directory,conf_object = conf_object)
             with open(train_out_folder + 'train_count.txt', 'w') as wf:
                 wf.write(str(train_count) + '\n')
 
             # Create validate batches
-            valid_out_folder, valid_count = input_raw.create_numpy_batches(conf_object)
+            valid_out_folder, valid_count = input_raw.create_numpy_batches(file_dir = conf_object.validate_directory,conf_object= conf_object)
 
             with open(valid_out_folder + 'valid_count.txt', 'w') as wf:
                 wf.write(str(valid_count) + '\n')
@@ -85,7 +85,7 @@ def create_numpy_test_batches(conf_object):
     if (conf_object.regenerate_test_inputs):
 
         try:
-            test_out_folder, test_count = input_raw.create_numpy_batches(conf_object)
+            test_out_folder, test_count = input_raw.create_numpy_batches(file_dir = conf_object.test_directory, conf_object = conf_object)
             with open (test_out_folder + 'test_count.txt','w') as wf:
                 wf.write(str(test_count) + '\n')
 
