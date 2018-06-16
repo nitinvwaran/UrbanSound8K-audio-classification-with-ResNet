@@ -27,6 +27,74 @@ class ModelHelper():
 
 
 
+
+    def inference_frozen(self, nparr, frozen_graph):
+
+        # TODO: dead function, reuse for when saving frozen graph is automated. This should also get its own common class..
+
+        gph = self.load_graph(frozen_graph)
+        y = gph.get_tensor_by_name('prefix/labels_softmax:0')
+
+        fingerprint_input = gph.get_tensor_by_name('prefix/fingerprint_input:0')
+
+        with tf.Session(graph=gph) as sess:
+            y_out = sess.run(
+                [
+                    y
+                ],
+                feed_dict={
+                    fingerprint_input: nparr
+                    # dropout_prob: 1.0,
+                })
+
+        return y_out
+
+    def load_graph(self, frozen_graph_filename):
+        # We load the protobuf file from the disk and parse it to retrieve the
+        # unserialized graph_def
+        with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+
+        # Then, we import the graph_def into a new Graph and returns it
+        with tf.Graph().as_default() as graph:
+            # The name var will prefix every op/nodes in your graph
+            # Since we load everything in a new graph, this is not needed
+            tf.import_graph_def(graph_def, name="prefix")
+        return graph
+
+    def save_frozen_graph(self, chkpoint_dir, max_len, ncep, label_count, isTraining):
+
+        # TODO: dead function, reuse for when saving frozen graph is automated. This should also get its own common class
+
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+        logits = self.build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep,
+                                  max_len=max_len,
+                                  isTraining=isTraining)
+
+        tf.nn.softmax(logits, name="labels_softmax")
+
+        checkpoint = tf.train.get_checkpoint_state(checkpoint_dir=chkpoint_dir)
+        chk_path = checkpoint.model_checkpoint_path
+        print(chk_path)
+
+        saver = tf.train.Saver(tf.global_variables())
+        sess = tf.Session()
+
+        saver.restore(sess, chk_path)
+
+        # Turn all the variables into inline constants inside the graph and save it.
+        frozen_graph_def = graph_util.convert_variables_to_constants(
+            sess, sess.graph_def, ['labels_softmax'])
+        tf.train.write_graph(
+            frozen_graph_def,
+            os.path.dirname(chkpoint_dir),
+            os.path.basename(chkpoint_dir + 'habits_frozen.pb'),
+            as_text=False)
+
+
 class AudioEventDetectionSuper(object):
 
     def __init__(self,conf_object):
@@ -191,9 +259,10 @@ class AudioEventDetectionSuper(object):
         return ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step
 
     @abc.abstractmethod
-    def base_train(self,train_folder,validate_folder,n_train,n_valid):
+    def base_train_full_batch_descent(self,train_folder,validate_folder,n_train,n_valid):
 
-        'Scratch training of graph. Can be overridden if necessary. Can be reused.'
+        'Scratch training of graph. Can be overridden if necessary. Can be reused, as long as the input numpy files '
+        'follow same naming format'
 
         learning_rate = self.conf_object.learning_rate
         dropoutprob = self.conf_object.dropout_prob
@@ -206,8 +275,6 @@ class AudioEventDetectionSuper(object):
         chkpoint_dir = self.conf_object.checkpoint_dir
         use_nfft = self.conf_object.use_nfft
 
-        sess = tf.InteractiveSession()
-
         if (use_nfft):
             input_size = nfft
             max_len = self.conf_object.cutoff_spectogram
@@ -215,165 +282,156 @@ class AudioEventDetectionSuper(object):
             input_size = ncep
             max_len = self.conf_object.cutoff_mfcc
 
-        bottleneck_input, fingerprint_input, dropout_prob\
-            = self.build_graph()
-        logits = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
+        with tf.Graph().as_default() as grap:
+            bottleneck_input, fingerprint_input, dropout_prob\
+                = self.build_graph()
+            logits = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
 
-        ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step\
-        = self.build_loss_optimizer(logits)
+            ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step\
+            = self.build_loss_optimizer(logits)
 
-        # For checkpoints
-        saver = tf.train.Saver()
-        init = tf.global_variables_initializer()
-        sess.run(init)
+        with tf.Session(graph=grap) as sess:
+            # For checkpoints
+            saver = tf.train.Saver()
+            init = tf.global_variables_initializer()
+            sess.run(init)
 
-        for i in range(1, epochs + 1):
-            total_conf_matrix = None
+            for i in range(1, epochs + 1):
+                total_conf_matrix = None
 
-            print('Epoch is: ' + str(i))
+                print('Epoch is: ' + str(i))
+                j = batch_size
+                '''''''''''''''''''''''''''''
+                'Full batch gradient descent'
+                '''''''''''''''''''''''''''''
+                while (j <= n_train):
+                    npInputs = np.load(
+                        train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
+                    npLabels = np.load(
+                        train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
+                            j) + '.npy'),
 
-            j = batch_size
+                    npInputs2 = np.reshape(npInputs, [-1, max_len * input_size])
+                    _, conf_matrix = sess.run(
+                        [
+                            train_step, confusion_matrix,
 
-            '''''''''''''''''''''''''''''
-            'Full batch gradient descent'
-            '''''''''''''''''''''''''''''
+                        ],
+                        feed_dict={
+                            fingerprint_input: npInputs2,
+                            ground_truth_input: npLabels[0],
+                            learning_rate_input: learning_rate,
+                            dropout_prob: dropoutprob,
+                        })
 
-            while (j <= n_train):
+                    if total_conf_matrix is None:
+                        total_conf_matrix = conf_matrix
+                    else:
+                        total_conf_matrix += conf_matrix
 
+                    if (j == n_train):
+                        break
 
-                npInputs = np.load(
-                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
-                npLabels = np.load(
-                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
-                        j) + '.npy'),
+                    if (j + batch_size > n_train):
+                        j = n_train
+                    else:
+                        j = j + batch_size
 
-                npInputs2 = np.reshape(npInputs, [-1, max_len * input_size])
-                _, conf_matrix = sess.run(
-                    [
-                        train_step, confusion_matrix,
+                'Training set reporting after every epoch'
+                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
+                true_pos = np.sum(np.diag(total_conf_matrix))
+                all_pos = np.sum(total_conf_matrix)
+                print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
 
-                    ],
-                    feed_dict={
-                        fingerprint_input: npInputs2,
-                        ground_truth_input: npLabels[0],
-                        learning_rate_input: learning_rate,
-                        dropout_prob: dropoutprob,
-                    })
-
-                if total_conf_matrix is None:
-                    total_conf_matrix = conf_matrix
-                else:
-                    total_conf_matrix += conf_matrix
-
-                if (j == n_train):
-                    break
-
-                if (j + batch_size > n_train):
-                    j = n_train
-                else:
-                    j = j + batch_size
-
-            'Training set reporting after every epoch'
-            print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
-            true_pos = np.sum(np.diag(total_conf_matrix))
-            all_pos = np.sum(total_conf_matrix)
-            print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
-
-            # Save after every 10 epochs
-            if (i % 10 == 0):
-                print('Saving checkpoint for epoch:' + str(i))
-                saver.save(sess=sess, save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',
-                           global_step=i)
+                # Save after every 10 epochs
+                if (i % 10 == 0):
+                    print('Saving checkpoint for epoch:' + str(i))
+                    saver.save(sess=sess, save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',
+                               global_step=i)
 
 
-            v = batch_size
-            valid_conf_matrix = None
-            if (batch_size > n_valid):
-                v = n_valid
-
-            while (v <= n_valid):
-
-                npValInputs = np.load(
-                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
-                npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
-
-                npValLabels = np.load(
-                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
-                        v) + '.npy')
-                _, conf_matrix = sess.run(
-                    [evaluation_step, confusion_matrix],
-                    feed_dict={
-                        fingerprint_input: npValInputs,
-                        ground_truth_input: npValLabels,
-                        dropout_prob: 1.0
-                    })
-
-                if (valid_conf_matrix is None):
-                    valid_conf_matrix = conf_matrix
-                else:
-                    valid_conf_matrix += conf_matrix
-
-                if (v == n_valid):
-                    break
-
-                if (v + batch_size > n_valid):
+                v = batch_size
+                valid_conf_matrix = None
+                if (batch_size > n_valid):
                     v = n_valid
-                else:
-                    v = v + batch_size
 
-            'Validation Set reporting after every epoch'
-            print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
-            true_pos = np.sum(np.diag(valid_conf_matrix))
-            all_pos = np.sum(valid_conf_matrix)
-            print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+                while (v <= n_valid):
+
+                    npValInputs = np.load(
+                        validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
+                    npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
+
+                    npValLabels = np.load(
+                        validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
+                            v) + '.npy')
+                    _, conf_matrix = sess.run(
+                        [evaluation_step, confusion_matrix],
+                        feed_dict={
+                            fingerprint_input: npValInputs,
+                            ground_truth_input: npValLabels,
+                            dropout_prob: 1.0
+                        })
+
+                    if (valid_conf_matrix is None):
+                        valid_conf_matrix = conf_matrix
+                    else:
+                        valid_conf_matrix += conf_matrix
+
+                    if (v == n_valid):
+                        break
+
+                    if (v + batch_size > n_valid):
+                        v = n_valid
+                    else:
+                        v = v + batch_size
+
+                'Validation Set reporting after every epoch'
+                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
+                true_pos = np.sum(np.diag(valid_conf_matrix))
+                all_pos = np.sum(valid_conf_matrix)
+                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
 
     @abc.abstractmethod
-    def retrain(self,train_bottleneck_dir,valid_bottleneck_dir,n_count,n_valid_count):
-        'Retraining method for training final classification layer with NN features'
-        return
+    def retrain_full_batch_descent(self, train_bottleneck_dir, valid_bottleneck_dir, n_count,n_valid_count):
 
+        model_helper = ModelHelper()
 
-
-
-    def retrain(self, train_bottleneck_dir, valid_bottleneck_dir, n_count,n_valid_count, label_count, ncep, nfft, cutoff_mfcc,
-                cutoff_spectogram,
-                isTraining, batch_size, n_count, n_valid_count, epochs, chkpoint_dir, learning_input=0.001,
-                use_nfft=True):
+        label_count = self.conf_object.num_labels
+        ncep = self.conf_object.ncep
+        nfft = self.conf_object.nfft
+        cutoff_mfcc = self.conf_object.cutoff_mfcc
+        cutoff_spectogram = self.conf_object.cutoff_spectogram
+        isTraining = self.conf_object.is_training
+        batch_size = self.conf_object.batch_size
+        epochs = self.conf_object.num_epochs
+        chkpoint_dir = self.conf_object.checkpoint_dir
+        learning_input= self.conf_object.learning_rate
+        use_nfft= self.conf_object.use_nfft
 
         print(
             'Starting re-training with following parameters:' + ' train count: ' + str(n_count) + ' valid count ' + str(
                 n_valid_count))
 
-        uu_id = uuid.uuid4()
+        uu_id = uuid.uuid4() # For temp graph naming with final NN classifier layer train
         retrain_chkpoint_dir = chkpoint_dir + 'tmp/version_model_labels_' + str(label_count) + '_time_' + str(
             uu_id) + '/'
 
         with tf.Graph().as_default() as grap:
 
             second_fc_output_channels = 128
+            '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            'Directly defining the bottleneck tensor, as we will pass the bottleneck files to it from disk'
+            '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+            with tf.variable_scope('tutorial_bottleneck_def'):
+                bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],
+                                                      name='bottleneck_input')
 
-            bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],
-                                              name='bottleneck_input')
-            final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias \
-                = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                               bottleneck_input=bottleneck_input)
+            logits \
+                = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
 
-            with tf.name_scope('cross_entropy'):
-                cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
-                    labels=ground_truth_retrain_input, logits=final_fc)
-
-            with tf.name_scope('train'):
-                learning_rate_input = tf.placeholder(
-                    tf.float32, [], name='learning_rate_input')
-                train_step = tf.train.GradientDescentOptimizer(
-                    learning_rate_input).minimize(cross_entropy_mean)
-
-            predicted_indices = tf.argmax(final_fc, 1)
-            correct_prediction = tf.equal(predicted_indices, ground_truth_retrain_input)
-            confusion_matrix = tf.confusion_matrix(
-                ground_truth_retrain_input, predicted_indices, num_classes=label_count)
-            evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step \
+                = self.build_loss_optimizer(logits)
 
         with tf.Session(graph=grap) as sess:
 
@@ -408,14 +466,14 @@ class AudioEventDetectionSuper(object):
                     npInputs2 = np.reshape(npInputs, [npInputs.shape[0] * npInputs.shape[1], npInputs.shape[2]])
                     npLabels2 = np.reshape(npLabels, [npLabels.shape[0]])
 
-                    xent_mean, _, conf_matrix = sess.run(
+                    train_step, conf_matrix = sess.run(
                         [
-                            cross_entropy_mean, train_step,
+                            train_step,
                             confusion_matrix
                         ],
                         feed_dict={
                             bottleneck_input: npInputs2,
-                            ground_truth_retrain_input: npLabels2,
+                            ground_truth_input: npLabels2,
                             learning_rate_input: learning_input,
                         })
 
@@ -460,10 +518,10 @@ class AudioEventDetectionSuper(object):
                     npValLabels2 = np.reshape(npValLabels, [npValLabels.shape[0]])
 
                     _, conf_matrix, _ = sess.run(
-                        [evaluation_step, confusion_matrix, predicted_indices],
+                        [evaluation_step, confusion_matrix],
                         feed_dict={
                             bottleneck_input: npValInputs2,
-                            ground_truth_retrain_input: npValLabels2,
+                            ground_truth_input: npValLabels2,
 
                         })
 
@@ -492,17 +550,213 @@ class AudioEventDetectionSuper(object):
         print('Base checkpoint graph is:' + base_checkpoint_file)
         print('Version checkpoint graph is:' + version_checkpoint_file)
 
-        # Should go back to the habits.py module
-        self.rebuild_graph_post_transfer_learn(ncep=ncep, nfft=nfft, cutoff_mfcc=cutoff_mfcc,
-                                               cutoff_spectogram=cutoff_spectogram, label_count=label_count,
-                                               isTraining=isTraining
-                                               , base_chkpoint_file=base_checkpoint_file,
-                                               version_chkpoint_file=version_checkpoint_file, use_nfft=use_nfft,
-                                               chkpoint_dir=chkpoint_dir)
+        return base_checkpoint_file,version_checkpoint_file
+
+    @abc.abstractmethod
+    def rebuild_graph_post_retrain(self,base_checkpoint_file,version_checkpoint_file):
+
+        ncep = self.conf_object.ncep
+        nfft = self.conf_object.nfft
+        cutoff_mfcc = self.conf_object.cutoff_mfcc
+        cutoff_spectogram = self.conf_object.cutoff_spectogram
+        label_count = self.conf_object.num_labels
+        isTraining = self.conf_object.is_training
+        chkpoint_dir = self.conf_object.checkpoint_dir
+        use_nfft = self.conf_object.use_nfft
+
+        with tf.Graph().as_default() as grap:
+
+            bottleneck_input, _, _ \
+                = self.build_graph()
+            _ = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
+
+            varb = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if
+                    not t.name.__contains__('layer_four')]
+            varb2 = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if
+                     t.name.__contains__('layer_four')]
+            varball = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)]
+
+        with tf.Session(graph=grap) as sess:
+
+            saver = tf.train.Saver(varb2)
+            saver.restore(sess, version_checkpoint_file)
+            saver = tf.train.Saver(varb)
+            saver.restore(sess, base_checkpoint_file)
+
+            'Useful debugging'
+            'val = [sess.run(v) for v in tf.global_variables()]'
+
+            saverFinal = tf.train.Saver(
+                varball)  # Turns out this new saver is the ley to combining graphs into a new graph / checkpoint
+            print('Saving checkpoint')
+            saverFinal.save(sess=sess, save_path=chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(
+                label_count) + '.ckpt')
+            print(
+                'Saved new graph version to location:' + chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(
+                    label_count) + '.ckpt')
+
+            'Use the below to check whether the new graph is being stitched together correctly'
+            # saverFinal.save(sess=sess, save_path='/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
+
+        # Use the below block to check whether the new graph was stitched together correctly
+        '''''
+        with tf.Session(graph=grap) as sess2:
+
+            init = tf.global_variables_initializer()
+            sess2.run(init)
+
+            print ('Verifying the correct graph')
+            saver = tf.train.import_meta_graph('/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt' + '.meta', clear_devices=True)
+        saver.restore(sess2, '/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
 
 
+            val = [sess2.run(v) for v in tf.global_variables()]
+        '''''
+    @abc.abstractmethod
+    def create_bottlenecks_cache(self, file_dir, bottleneck_input_dir, conf_object):
+
+        ncep = self.conf_object.ncep
+        nfft = self.conf_object.nfft
+        cutoff_mfcc = self.conf_object.cutoff_mfcc
+        cutoff_spectogram = self.conf_object.cutoff_spectogram
+        isTraining = self.conf_object.is_training
+        base_chkpoint_dir = self.conf_object.checkpoint_dir
+        label_count = self.conf_object.num_labels
+        labels_meta_file = self.conf_object.label_meta_file_path
+        use_nfft = self.conf_object.use_mfft
+        labels_meta = self.conf_object.labels_dict
+
+        model_helper = ModelHelper()
+        inp = InputRaw()
+
+        if (not os.path.exists(base_chkpoint_dir + 'checkpoint')):
+            raise Exception('Base Checkpoint File is Missing! A Crisis!')
+
+        if (use_nfft):
+            input_size = nfft
+            max_len = cutoff_spectogram
+        else:
+            input_size = ncep
+            max_len = cutoff_mfcc
+
+        with tf.Graph().as_default() as grap:
+            bottleneck_input, fingerprint_input, dropout_prob = self.build_graph()
+
+        with tf.Session(graph=grap) as sess:
+
+            init = tf.global_variables_initializer()
+            sess.run(init)
+
+            base_chkpoint_file_path = model_helper.get_checkpoint_file(base_chkpoint_dir)
+            print('Base Checkpoint File is:' + base_chkpoint_file_path)
+
+            saver = tf.train.import_meta_graph(base_chkpoint_file_path + '.meta', clear_devices=True)
+            saver.restore(sess, base_chkpoint_file_path)
+
+            ''''
+            # uncomment below to debug variable names
+            # between the graph in memory and the graph from checkpoint file
+            # get_variable method should now reuse variables from memory scope
+            # Variable method was creating new copies and suffixing the numbers to new variables in memory
+
+            var_name = [v.name for v in tf.global_variables()]
+            print(var_name)
+            reader = pyten.NewCheckpointReader(chk_path)
+            var_to_shape_map = reader.get_variable_to_shape_map()
+            print(var_to_shape_map)
+            print(chk_path)
+            saver.restore(sess,chk_path)
+            '''
+
+            # Reset bottleneck input directory
+            if (os.path.exists(bottleneck_input_dir)):
+                shutil.rmtree(bottleneck_input_dir)
+
+            os.makedirs(bottleneck_input_dir)
+
+            os.chdir(file_dir)
+            file_count = 0
+            for filename in glob.glob('*.wav'):
+
+                file_count = file_count + 1
+                mfcc, spec = inp.prepare_mfcc_spectogram(file_dir=file_dir, file_name=filename, ncep=ncep, nfft=nfft,
+                                                         cutoff_mfcc=cutoff_mfcc, cutoff_spectogram=cutoff_spectogram)
+
+            if (use_nfft):
+                nparr2 = np.reshape(spec, [-1, cutoff_spectogram * input_size])
+            else:
+                nparr2 = np.reshape(mfcc, [-1, cutoff_mfcc * input_size])
+
+            bottleneck = sess.run(
+                [
+                    bottleneck_input
+                ],
+                feed_dict={
+                    fingerprint_input: nparr2,
+                    dropout_prob: 1.0,
+                })
+
+            np.save(bottleneck_input_dir + 'numpy_bottle_' + filename + '.npy', bottleneck[0])
+
+            labels = []
+            # l = inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename)
+            labels.append(inp.stamp_label(num_labels=label_count, labels_meta=labels_meta, filename=filename))
+            np.save(bottleneck_input_dir + 'numpy_bottle_labels_' + filename + '.npy', np.array(labels))
+
+        return file_count
 
 
+    @abc.abstractmethod
+    def single_inference(self,  nparr):
+
+        ncep = self.conf_object.ncep
+        nfft = self.conf_object.nfft
+        cutoff_mfcc = self.conf_object.cutoff_mfcc
+        cutoff_spectogram = self.conf_object.cutoff_spectogram
+        label_count = self.conf_object.num_labels
+        isTraining = self.conf_object.is_training
+        checkpoint_file_path = self.conf_object.checkpoint_dir
+        use_nfft = self.conf_object.use_nfft
+
+
+        with tf.Graph().as_default() as grap:
+            bottleneck_input, fingerprint_input,dropout_prob = self.build_graph()
+            logits = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
+
+        with tf.Session(graph=grap) as sess:
+            init = tf.global_variables_initializer()
+            sess.run(init)
+
+            print('Loading checkpoint file:' + checkpoint_file_path)
+            saver = tf.train.import_meta_graph(checkpoint_file_path + '.meta', clear_devices=True)
+            saver.restore(sess, checkpoint_file_path)
+
+            # uncomment below to debug variable names
+            # between the graph in memory and the graph from checkpoint file
+            # get_variable method should now reuse variables from memory scope
+            # Variable method was creating new copies and suffixing the numbers to new variables in memory
+
+            # var_name = [v.name for v in tf.global_variables()]
+
+            # print(var_name)
+            # reader = pyten.NewCheckpointReader(chk_path)
+            # var_to_shape_map = reader.get_variable_to_shape_map()
+            # print(var_to_shape_map)
+            # print(chk_path)
+
+            # saver.restore(sess,chk_path)
+            predictions = sess.run(
+                [
+                    logits
+                ],
+                feed_dict={
+                    fingerprint_input: nparr,
+                    dropout_prob: 1.0,
+                })
+
+            print('Predictions are:' + str(predictions))
+            print ('Softmax predictions are:' + str(tf.nn.softmax(predictions)))
+            return predictions,tf.nn.softmax(predictions)
 
 
 
@@ -859,298 +1113,11 @@ class AudioEventDetectionResnet(AudioEventDetectionSuper):
 
 
 
-    def inference_frozen(self, nparr, frozen_graph):
 
-        # TODO: dead function, reuse for when saving frozen graph is automated. This should also get its own common class..
 
-        gph = self.load_graph(frozen_graph)
-        y = gph.get_tensor_by_name('prefix/labels_softmax:0')
 
-        fingerprint_input = gph.get_tensor_by_name('prefix/fingerprint_input:0')
 
-        with tf.Session(graph=gph) as sess:
-            y_out = sess.run(
-                [
-                    y
-                ],
-                feed_dict={
-                    fingerprint_input: nparr
-                    # dropout_prob: 1.0,
-                })
-
-        return y_out
-
-    def load_graph(self, frozen_graph_filename):
-        # We load the protobuf file from the disk and parse it to retrieve the
-        # unserialized graph_def
-        with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
-            graph_def = tf.GraphDef()
-            graph_def.ParseFromString(f.read())
-
-        # Then, we import the graph_def into a new Graph and returns it
-        with tf.Graph().as_default() as graph:
-            # The name var will prefix every op/nodes in your graph
-            # Since we load everything in a new graph, this is not needed
-            tf.import_graph_def(graph_def, name="prefix")
-        return graph
-
-    def save_frozen_graph(self, chkpoint_dir, max_len, ncep, label_count, isTraining):
-
-        # TODO: dead function, reuse for when saving frozen graph is automated. This should also get its own common class
-
-        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * ncep], name="fingerprint_input")
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-        logits = self.build_graph(fingerprint_input=fingerprint_input, dropout_prob=dropout_prob, ncep=ncep,
-                                  max_len=max_len,
-                                  isTraining=isTraining)
-
-        tf.nn.softmax(logits, name="labels_softmax")
-
-        checkpoint = tf.train.get_checkpoint_state(checkpoint_dir=chkpoint_dir)
-        chk_path = checkpoint.model_checkpoint_path
-        print(chk_path)
-
-        saver = tf.train.Saver(tf.global_variables())
-        sess = tf.Session()
-
-        saver.restore(sess, chk_path)
-
-        # Turn all the variables into inline constants inside the graph and save it.
-        frozen_graph_def = graph_util.convert_variables_to_constants(
-            sess, sess.graph_def, ['labels_softmax'])
-        tf.train.write_graph(
-            frozen_graph_def,
-            os.path.dirname(chkpoint_dir),
-            os.path.basename(chkpoint_dir + 'habits_frozen.pb'),
-            as_text=False)
-
-    def inference(self, ncep, nfft, cutoff_mfcc, cutoff_spectogram, label_count, isTraining, nparr,
-                  checkpoint_file_path, use_nfft=True):
-
-        if (use_nfft):
-            max_len = cutoff_spectogram
-            input_size = nfft
-        else:
-            max_len = cutoff_mfcc
-            input_size = ncep
-
-        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size],
-                                           name="fingerprint_input")
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-        logits = self.build_graph(fingerprint_input=fingerprint_input,
-                                            dropout_prob=dropout_prob, ncep=ncep, nfft=nfft,
-                                            max_len=max_len, isTraining=isTraining, use_nfft=use_nfft)
-        '''
-        bottleneck_input, _, _, _, _, _, _ = self.build_graph(fingerprint_input=fingerprint_input,
-                                                              dropout_prob=dropout_prob, ncep=ncep, nfft=nfft,
-                                                              max_len=max_len, isTraining=isTraining, use_nfft=use_nfft)
-        logits, _, _, _, _ = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                                       bottleneck_input=bottleneck_input)
-        '''
-
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
-
-        print('Loading checkpoint file:' + checkpoint_file_path)
-        saver = tf.train.import_meta_graph(checkpoint_file_path + '.meta', clear_devices=True)
-        saver.restore(sess, checkpoint_file_path)
-
-        # uncomment below to debug variable names
-        # between the graph in memory and the graph from checkpoint file
-        # get_variable method should now reuse variables from memory scope
-        # Variable method was creating new copies and suffixing the numbers to new variables in memory
-
-        # var_name = [v.name for v in tf.global_variables()]
-        # print(var_name)
-        # reader = pyten.NewCheckpointReader(chk_path)
-        # var_to_shape_map = reader.get_variable_to_shape_map()
-        # print(var_to_shape_map)
-        # print(chk_path)
-
-        # saver.restore(sess,chk_path)
-        predictions = sess.run(
-            [
-                logits
-            ],
-            feed_dict={
-                fingerprint_input: nparr,
-                dropout_prob: 1.0,
-            })
-
-        print('Predictions are:' + str(predictions))
-        # print ('Softmax predictions are:' + tf.nn.softmax(logits))
-        return predictions
-
-
-
-    def create_bottlenecks_cache(self, file_dir, bottleneck_input_dir,conf_object):
-
-        ncep = conf_object.ncep
-        nfft = conf_object.nfft
-        cutoff_mfcc = conf_object.cutoff_mfcc
-        cutoff_spectogram = conf_object.cutoff_spectogram
-        isTraining = conf_object.is_training
-        base_chkpoint_dir = conf_object.checkpoint_dir
-        label_count = conf_object.num_labels
-        labels_meta_file = conf_object.label_meta_file_path
-        use_nfft= conf_object.use_mfft
-
-        model_helper = ModelHelper()
-
-        if (not os.path.exists(base_chkpoint_dir + 'checkpoint')):
-            raise Exception('Base Checkpoint File is Missing! A Crisis!')
-
-        if (use_nfft):
-            input_size = nfft
-            max_len = cutoff_spectogram
-        else:
-            input_size = ncep
-            max_len = cutoff_mfcc
-
-        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size],
-                                           name="fingerprint_input")
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-        bottleneck_input, _, _, _, _, _, _ = self.build_graph(fingerprint_input=fingerprint_input,
-                                                              dropout_prob=dropout_prob,
-                                                              ncep=ncep, nfft=nfft, max_len=max_len,
-                                                              isTraining=isTraining, use_nfft=use_nfft)
-
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
-
-        base_chkpoint_file_path = model_helper.get_checkpoint_file(base_chkpoint_dir)
-        print('Base Checkpoint File is:' + base_chkpoint_file_path)
-
-        saver = tf.train.import_meta_graph(base_chkpoint_file_path + '.meta', clear_devices=True)
-        saver.restore(sess, base_chkpoint_file_path)
-
-        ''''
-        # uncomment below to debug variable names
-        # between the graph in memory and the graph from checkpoint file
-        # get_variable method should now reuse variables from memory scope
-        # Variable method was creating new copies and suffixing the numbers to new variables in memory
-
-        var_name = [v.name for v in tf.global_variables()]
-        print(var_name)
-        reader = pyten.NewCheckpointReader(chk_path)
-        var_to_shape_map = reader.get_variable_to_shape_map()
-        print(var_to_shape_map)
-        print(chk_path)
-        saver.restore(sess,chk_path)
-        '''
-
-        _, labels_meta = inp.get_labels_and_count(labels_meta_file)
-
-        # Reset bottleneck input directory
-        if (os.path.exists(bottleneck_input_dir)):
-            shutil.rmtree(bottleneck_input_dir)
-
-        os.makedirs(bottleneck_input_dir)
-
-        os.chdir(file_dir)
-        file_count = 0
-        for filename in glob.glob('*.wav'):
-
-            file_count = file_count + 1
-            mfcc, spec = inp.prepare_mfcc_spectogram(file_dir=file_dir, file_name=filename, ncep=ncep, nfft=nfft,
-                                                     cutoff_mfcc=cutoff_mfcc, cutoff_spectogram=cutoff_spectogram)
-
-            if (use_nfft):
-                nparr2 = np.reshape(spec, [-1, cutoff_spectogram * input_size])
-            else:
-                nparr2 = np.reshape(mfcc, [-1, cutoff_mfcc * input_size])
-
-            bottleneck = sess.run(
-                [
-                    bottleneck_input
-                ],
-                feed_dict={
-                    fingerprint_input: nparr2,
-                    dropout_prob: 1.0,
-                })
-
-            np.save(bottleneck_input_dir + 'numpy_bottle_' + filename + '.npy', bottleneck[0])
-
-            labels = []
-            # l = inp.stamp_label(num_labels=label_count,labels_meta=labels_meta,filename=filename)
-            labels.append(inp.stamp_label(num_labels=label_count, labels_meta=labels_meta, filename=filename))
-            np.save(bottleneck_input_dir + 'numpy_bottle_labels_' + filename + '.npy', np.array(labels))
-
-        return file_count
-
-    def rebuild_graph_post_transfer_learn(self, ncep, nfft, cutoff_mfcc, cutoff_spectogram, label_count, isTraining,
-                                          chkpoint_dir, base_chkpoint_file, version_chkpoint_file, use_nfft=True):
-
-        if (use_nfft):
-            input_size = nfft
-            max_len = cutoff_spectogram
-        else:
-            input_size = ncep
-            max_len = cutoff_mfcc
-
-        with tf.Graph().as_default() as grap:
-
-            fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size],
-                                               name="fingerprint_input")
-            dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-            bottleneck_tensor, first_weights, first_bias, first_fc_weights, first_fc_bias, \
-            second_fc_weights, second_fc_bias = self.build_graph(fingerprint_input=fingerprint_input,
-                                                                 dropout_prob=dropout_prob,
-                                                                 ncep=ncep, nfft=nfft, max_len=max_len,
-                                                                 isTraining=isTraining, use_nfft=use_nfft)
-
-            final_fc, _, _, _, _ = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                                                bottleneck_input=bottleneck_tensor)
-
-            varb = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if
-                    not t.name.__contains__('layer_four')]
-            varb2 = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES) if
-                     t.name.__contains__('layer_four')]
-            varball = [t for t in grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)]
-
-        with tf.Session(graph=grap) as sess:
-
-            saver = tf.train.Saver(varb2)
-            saver.restore(sess, version_chkpoint_file)
-            saver = tf.train.Saver(varb)
-            saver.restore(sess, base_chkpoint_file)
-
-            'Useful debugging'
-            'val = [sess.run(v) for v in tf.global_variables()]'
-
-            saverFinal = tf.train.Saver(
-                varball)  # Turns out this new saver is the ley to combining graphs into a new graph / checkpoint
-            print('Saving checkpoint')
-            saverFinal.save(sess=sess, save_path=chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(
-                label_count) + '.ckpt')
-            print(
-                'Saved new graph version to location:' + chkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(
-                    label_count) + '.ckpt')
-
-            'Use the below to check whether the new graph is being stitched together correctly'
-            # saverFinal.save(sess=sess, save_path='/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
-
-        # Use the below block to check whether the new graph was stitched together correctly
-        '''''
-        with tf.Session(graph=grap) as sess2:
-
-            init = tf.global_variables_initializer()
-            sess2.run(init)
-
-            print ('Verifying the correct graph')
-            saver = tf.train.import_meta_graph('/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt' + '.meta', clear_devices=True)
-        saver.restore(sess2, '/home/nitin/PycharmProjects/habits/checkpoints/test.ckpt')
-
-
-            val = [sess2.run(v) for v in tf.global_variables()]
-        '''''
-
-
+    def rebuild_graph_post_transfer_learn():
 
 
 if __name__ == '__main__':

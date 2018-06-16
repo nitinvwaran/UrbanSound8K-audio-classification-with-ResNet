@@ -3,7 +3,7 @@ import shutil
 from habits.inputs_2 import CommonHelpers
 from habits.inputs_2 import InputRaw
 from habits.habits_configuration import Configuration
-from habits.model import AudioEventDetection
+from habits.model import AudioEventDetectionSuper
 
 
 def create_numpy_train_batches(conf_object):
@@ -103,7 +103,7 @@ def create_numpy_test_batches(conf_object):
 
 def create_train_bottleneck_batches(conf_object):
 
-    aed = AudioEventDetection()
+    aed = AudioEventDetectionSuper()
     input_raw = InputRaw()
 
     bottleneck_batches_train_dir = conf_object.train_bottleneck_dir + 'batch_label_count_' + str(conf_object.num_labels) + '/'
@@ -225,7 +225,7 @@ def main():
     do_scratch_training = True
     do_transfer_training = False
     number_cepstrums = 13
-    nfft_value = 512 # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
+    nfft_value = (512 / 2) + 1 # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
     regenerate_training_inputs = False
     regenerate_test_inputs = False
     cutoff_spectogram = 300
@@ -242,7 +242,7 @@ def main():
                         ,num_epochs = num_epochs
                         )
 
-    aed = AudioEventDetection()
+    aed = AudioEventDetectionSuper()
 
     run_validations(conf_object)
 
@@ -264,22 +264,22 @@ def main():
         print ('Params are; train folder: ' + str(train_out_folder) + ' valid folder: ' + str(valid_out_folder) + ' number train files: ' + str(train_count) + ' number validation files:  ' + str(valid_count))
         print ('Number of Labels:' + str(num_labels))
 
-        nfft = int(conf_object.nfft / 2 + 1)
+        #nfft = int(conf_object.nfft / 2 + 1)
 
-        if (conf_object.use_nfft):
-            max_len = conf_object.cutoff_spectogram
-        else:
-            max_len = conf_object.cutoff_mfcc
+        #if (conf_object.use_nfft):
+        #    max_len = conf_object.cutoff_spectogram
+        #else:
+        #    max_len = conf_object.cutoff_mfcc
 
-            # Base  checkpoint directory which will always store only 1 model from scratch
-            # TODO: create freeze graph version of the scratch model
-            base_checkpoint_dir = conf_object.checkpoint_dir + 'base_dir/'
+        # Base  checkpoint directory which will always store only 1 model from scratch
+        # TODO: create freeze graph version of the scratch model
+        base_checkpoint_dir = conf_object.checkpoint_dir + 'base_dir/'
 
-            if (os.path.exists(base_checkpoint_dir)):
-                shutil.rmtree(base_checkpoint_dir)
-            os.makedirs(base_checkpoint_dir)
+        if (os.path.exists(base_checkpoint_dir)):
+            shutil.rmtree(base_checkpoint_dir)
+        os.makedirs(base_checkpoint_dir)
 
-            aed.base_train(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count,conf_object = conf_object)
+        aed.base_train_full_batch_descent(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count)
 
     if (conf_object.do_transfer_training):
 
@@ -287,13 +287,12 @@ def main():
         valid_file_count = create_train_bottleneck_batches(conf_object=conf_object)
 
         # Retrain the weights for just the softmax layer, given the bottleneck inputs
-        aed.retrain(train_bottleneck_dir=bottleneck_batches_train_dir,
+        base_checkpoint_file, version_checkpoint_file \
+        = aed.retrain_full_batch_descent(train_bottleneck_dir=bottleneck_batches_train_dir,
                       valid_bottleneck_dir = bottleneck_batched_valid_dir,n_count = train_files_count,n_valid_count = valid_file_count,
-                      conf_object = conf_object
                       )
 
-
-
+        aed.rebuild_graph_post_retrain(base_checkpoint_file=base_checkpoint_file,version_checkpoint_file=version_checkpoint_file)
 
 
 if __name__ == '__main__':
