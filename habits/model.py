@@ -33,24 +33,478 @@ class AudioEventDetectionSuper(object):
         self.conf_object = conf_object
 
     @abc.abstractmethod
-    def build_graph(self,fingerprint_input):
-        'Builds the graph'
-        return
+    def build_graph(self):
+
+        'A Tutorial Graph with one Conv layer as the base graph, which can be overridden'
+        'If overridden, must return the bottleneck tensor and/or the final logits tensor'
+
+        if (self.conf_object.use_nfft):
+            input_time_size = self.conf_object.cutoff_spectogram
+            input_frequency_size = self.conf_object.nfft
+        else:
+            input_time_size = self.conf_object.cutoff_mfcc
+            input_frequency_size = self.conf_object.ncep
+
+        # Hyper Parameters!
+        first_filter_width = 8
+        first_filter_height = input_time_size
+        first_filter_count = 186
+        first_filter_stride_x = 1
+        first_filter_stride_y = 1
+
+        with tf.variable_scope('tutorial_layer_one', reuse=tf.AUTO_REUSE):
+
+            fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, input_time_size * input_frequency_size],
+                                               name="fingerprint_input")
+
+            fingerprint_4d = tf.reshape(fingerprint_input,
+                                        [-1, input_time_size, input_frequency_size, 1])
+
+            dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+
+            l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
+            l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
+
+            first_weights = tf.get_variable(name="weight_one",
+                                            shape=[first_filter_height, first_filter_width, 1, first_filter_count],
+                                            dtype=tf.float32,
+                                            initializer=l1w_init,
+                                            )
+            first_bias = tf.get_variable(name="bias_one", shape=[first_filter_count], dtype=tf.float32,
+                                         initializer=l1b_init)
+            first_conv = tf.nn.conv2d(fingerprint_4d, first_weights,
+                                      [1, first_filter_stride_y, first_filter_stride_x, 1], 'VALID') + first_bias
+            first_relu = tf.nn.relu(first_conv)
+
+            if self.conf_object.is_training:
+                first_dropout = tf.nn.dropout(first_relu, dropout_prob)
+            else:
+                first_dropout = first_relu
+
+        first_conv_output_width = math.floor(
+            (input_frequency_size - first_filter_width + first_filter_stride_x) /
+            first_filter_stride_x)
+        first_conv_output_height = math.floor(
+            (input_time_size - first_filter_height + first_filter_stride_y) /
+            first_filter_stride_y)
+        first_conv_element_count = int(
+            first_conv_output_width * first_conv_output_height * first_filter_count)
+        flattened_first_conv = tf.reshape(first_dropout, [-1, first_conv_element_count])
+
+        first_fc_output_channels = 128
+
+        with tf.variable_scope('tutorial_layer_two', reuse=tf.AUTO_REUSE):
+            l2b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
+            l2w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
+
+            first_fc_weights = tf.get_variable(name="weight_two",
+                                               shape=[first_conv_element_count, first_fc_output_channels],
+                                               dtype=tf.float32, initializer=l2w_init)
+            first_fc_bias = tf.get_variable(name="bias_two", shape=[first_fc_output_channels], dtype=tf.float32,
+                                            initializer=l2b_init)
+            first_fc = tf.matmul(flattened_first_conv, first_fc_weights) + first_fc_bias
+
+            if self.conf_object.is_training:
+                second_fc_input = tf.nn.dropout(first_fc, dropout_prob)
+            else:
+                second_fc_input = first_fc
+
+        second_fc_output_channels = 128  # number of cols in bottleneck tensor
+
+        with tf.variable_scope('tutorial_layer_three', reuse=tf.AUTO_REUSE):
+            l3b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
+            l3w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
+
+            second_fc_weights = tf.get_variable(name="weight_three",
+                                                shape=[first_fc_output_channels, second_fc_output_channels],
+                                                dtype=tf.float32, initializer=l3w_init)
+            second_fc_bias = tf.get_variable(name="bias_three", shape=[second_fc_output_channels], dtype=tf.float32,
+                                             initializer=l3b_init)
+            second_fc = tf.matmul(second_fc_input, second_fc_weights) + second_fc_bias
+
+            if self.conf_object.is_training:
+                final_fc_input = tf.nn.dropout(second_fc, dropout_prob)
+            else:
+                final_fc_input = second_fc
+
+        # The bottleneck tensor is final_fc_input
+        # Also return other operations used during training process
+        return final_fc_input, fingerprint_input,dropout_prob
 
     @abc.abstractmethod
-    def build_final_layer_graph(self,bottleneck_input):
-        'Builds last layer for transfer learning'
-        return
+    def build_final_layer_classifier(self,bottleneck_input):
+
+        'Builds the final layer graph. Number of labels can vary - for transfer learning. Can also override with an'
+        'ordinary classifier with the bottleneck features'
+        'If overridden, must return the logits operator'
+
+        label_count = self.conf_object.num_labels
+
+        second_fc_output_channels = 128
+
+        with tf.variable_scope('tutorial_layer_four', reuse=tf.AUTO_REUSE):
+            l4b_init = tf.random_normal_initializer(mean=0, stddev=0.0, dtype=tf.float32)
+            l4w_init = tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)
+            final_fc_weights = tf.get_variable(name="weight_four",
+                                               shape=[second_fc_output_channels, label_count], dtype=tf.float32,
+                                               initializer=l4w_init)
+            final_fc_bias = tf.get_variable(name="bias_four", shape=[label_count], dtype=tf.float32,
+                                            initializer=l4b_init)
+            final_fc = tf.matmul(bottleneck_input, final_fc_weights) + final_fc_bias
+
+        #ground_truth_retrain_input = tf.placeholder(dtype=tf.int64, shape=[None], name=ground_truth_name)
+
+        # Return the logits of size [batch_size, label_count]
+        return final_fc
+
+    @abc.abstractmethod
+    def build_loss_optimizer(self, logits):
+
+        'Builds the loss function and optimizer - can be overridden and your own graph version implemented'
+        'Assumes multi-class classification case in the base'
+        'Any overrides must define the following operations to return:'
+        'ground_truth_input, learning_rate_input,train_step,confusion_matrix, evaluation_step'
+
+        # Create the back propagation and training evaluation machinery in the graph.
+        with tf.name_scope('tutorial_cross_entropy'):
+            # Define loss and optimizer
+            ground_truth_input = tf.placeholder(
+                tf.int64, [None], name='groundtruth_input')
+            softmax = tf.nn.softmax(logits, name="softmax_op")
+            cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
+                labels=ground_truth_input, logits=softmax)
+
+        with tf.name_scope('tutorial_train'):
+            learning_rate_input = tf.placeholder(
+                tf.float32, [], name='learning_rate_input')
+
+            train_step = tf.train.GradientDescentOptimizer(
+                learning_rate_input).minimize(cross_entropy_mean)
+
+        with tf.name_scope('tutorial_metrics'):
+            predicted_indices = tf.argmax(softmax, 1, name="predicted_indices")
+            correct_prediction = tf.equal(predicted_indices, ground_truth_input, name='correct_prediction')
+            confusion_matrix = tf.confusion_matrix(
+                ground_truth_input, predicted_indices, num_classes=self.conf_object.num_labels, name="confusion_matrix")
+            evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="eval_step")
+
+        return ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step
 
     @abc.abstractmethod
     def base_train(self,train_folder,validate_folder,n_train,n_valid):
-        'Base training method'
-        return
+
+        'Scratch training of graph. Can be overridden if necessary. Can be reused.'
+
+        learning_rate = self.conf_object.learning_rate
+        dropoutprob = self.conf_object.dropout_prob
+        ncep = self.conf_object.ncep
+        nfft = self.conf_object.nfft
+        label_count = self.conf_object.num_labels
+        isTraining = self.conf_object.is_training
+        batch_size = self.conf_object.batch_size
+        epochs = self.conf_object.num_epochs
+        chkpoint_dir = self.conf_object.checkpoint_dir
+        use_nfft = self.conf_object.use_nfft
+
+        sess = tf.InteractiveSession()
+
+        if (use_nfft):
+            input_size = nfft
+            max_len = self.conf_object.cutoff_spectogram
+        else:
+            input_size = ncep
+            max_len = self.conf_object.cutoff_mfcc
+
+        bottleneck_input, fingerprint_input, dropout_prob\
+            = self.build_graph()
+        logits = self.build_final_layer_classifier(bottleneck_input=bottleneck_input)
+
+        ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step\
+        = self.build_loss_optimizer(logits)
+
+        # For checkpoints
+        saver = tf.train.Saver()
+        init = tf.global_variables_initializer()
+        sess.run(init)
+
+        for i in range(1, epochs + 1):
+            total_conf_matrix = None
+
+            print('Epoch is: ' + str(i))
+
+            j = batch_size
+
+            '''''''''''''''''''''''''''''
+            'Full batch gradient descent'
+            '''''''''''''''''''''''''''''
+
+            while (j <= n_train):
+
+
+                npInputs = np.load(
+                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
+                npLabels = np.load(
+                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
+                        j) + '.npy'),
+
+                npInputs2 = np.reshape(npInputs, [-1, max_len * input_size])
+                _, conf_matrix = sess.run(
+                    [
+                        train_step, confusion_matrix,
+
+                    ],
+                    feed_dict={
+                        fingerprint_input: npInputs2,
+                        ground_truth_input: npLabels[0],
+                        learning_rate_input: learning_rate,
+                        dropout_prob: dropoutprob,
+                    })
+
+                if total_conf_matrix is None:
+                    total_conf_matrix = conf_matrix
+                else:
+                    total_conf_matrix += conf_matrix
+
+                if (j == n_train):
+                    break
+
+                if (j + batch_size > n_train):
+                    j = n_train
+                else:
+                    j = j + batch_size
+
+            'Training set reporting after every epoch'
+            print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
+            true_pos = np.sum(np.diag(total_conf_matrix))
+            all_pos = np.sum(total_conf_matrix)
+            print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
+
+            # Save after every 10 epochs
+            if (i % 10 == 0):
+                print('Saving checkpoint for epoch:' + str(i))
+                saver.save(sess=sess, save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',
+                           global_step=i)
+
+
+            v = batch_size
+            valid_conf_matrix = None
+            if (batch_size > n_valid):
+                v = n_valid
+
+            while (v <= n_valid):
+
+                npValInputs = np.load(
+                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
+                npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
+
+                npValLabels = np.load(
+                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
+                        v) + '.npy')
+                _, conf_matrix = sess.run(
+                    [evaluation_step, confusion_matrix],
+                    feed_dict={
+                        fingerprint_input: npValInputs,
+                        ground_truth_input: npValLabels,
+                        dropout_prob: 1.0
+                    })
+
+                if (valid_conf_matrix is None):
+                    valid_conf_matrix = conf_matrix
+                else:
+                    valid_conf_matrix += conf_matrix
+
+                if (v == n_valid):
+                    break
+
+                if (v + batch_size > n_valid):
+                    v = n_valid
+                else:
+                    v = v + batch_size
+
+            'Validation Set reporting after every epoch'
+            print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
+            true_pos = np.sum(np.diag(valid_conf_matrix))
+            all_pos = np.sum(valid_conf_matrix)
+            print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+
 
     @abc.abstractmethod
     def retrain(self,train_bottleneck_dir,valid_bottleneck_dir,n_count,n_valid_count):
         'Retraining method for training final classification layer with NN features'
         return
+
+
+
+
+    def retrain(self, train_bottleneck_dir, valid_bottleneck_dir, n_count,n_valid_count, label_count, ncep, nfft, cutoff_mfcc,
+                cutoff_spectogram,
+                isTraining, batch_size, n_count, n_valid_count, epochs, chkpoint_dir, learning_input=0.001,
+                use_nfft=True):
+
+        print(
+            'Starting re-training with following parameters:' + ' train count: ' + str(n_count) + ' valid count ' + str(
+                n_valid_count))
+
+        uu_id = uuid.uuid4()
+        retrain_chkpoint_dir = chkpoint_dir + 'tmp/version_model_labels_' + str(label_count) + '_time_' + str(
+            uu_id) + '/'
+
+        with tf.Graph().as_default() as grap:
+
+            second_fc_output_channels = 128
+
+            bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],
+                                              name='bottleneck_input')
+            final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias \
+                = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
+                                               bottleneck_input=bottleneck_input)
+
+            with tf.name_scope('cross_entropy'):
+                cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
+                    labels=ground_truth_retrain_input, logits=final_fc)
+
+            with tf.name_scope('train'):
+                learning_rate_input = tf.placeholder(
+                    tf.float32, [], name='learning_rate_input')
+                train_step = tf.train.GradientDescentOptimizer(
+                    learning_rate_input).minimize(cross_entropy_mean)
+
+            predicted_indices = tf.argmax(final_fc, 1)
+            correct_prediction = tf.equal(predicted_indices, ground_truth_retrain_input)
+            confusion_matrix = tf.confusion_matrix(
+                ground_truth_retrain_input, predicted_indices, num_classes=label_count)
+            evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+        with tf.Session(graph=grap) as sess:
+
+            saver = tf.train.Saver()
+            init = tf.global_variables_initializer()
+            sess.run(init)
+
+            '''
+            ' Useful debugging below ' 
+            # Check that only part of the graph is restored 
+            var_name = [v.name for v in tf.global_variables()]
+            print(var_name)
+
+            varb = grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+            print (varb)
+
+            val = [sess.run(v) for v in varb]
+            print(val)
+            '''
+
+            for i in range(1, epochs + 1):
+                total_conf_matrix = None
+
+                j = batch_size
+                while (j <= n_count):
+
+                    # print ('Training batch:' + str(j))
+
+                    npInputs = np.load(train_bottleneck_dir + 'bottleneck_batch' + '_' + str(j) + '.npy')
+                    npLabels = np.load(train_bottleneck_dir + 'bottleneck_batch_label' + '_' + str(j) + '.npy')
+
+                    npInputs2 = np.reshape(npInputs, [npInputs.shape[0] * npInputs.shape[1], npInputs.shape[2]])
+                    npLabels2 = np.reshape(npLabels, [npLabels.shape[0]])
+
+                    xent_mean, _, conf_matrix = sess.run(
+                        [
+                            cross_entropy_mean, train_step,
+                            confusion_matrix
+                        ],
+                        feed_dict={
+                            bottleneck_input: npInputs2,
+                            ground_truth_retrain_input: npLabels2,
+                            learning_rate_input: learning_input,
+                        })
+
+                    if total_conf_matrix is None:
+                        total_conf_matrix = conf_matrix
+                    else:
+                        total_conf_matrix += conf_matrix
+
+                    if (j == n_count):
+                        break
+
+                    if (j + batch_size > n_count):
+                        j = n_count
+                    else:
+                        j = j + batch_size
+
+                print('Epoch:' + str(i))
+                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
+
+                # Save after every 10 epochs
+                if (i % 10 == 0):
+                    print('Saving checkpoint')
+                    saver.save(sess=sess, save_path=retrain_chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt',
+                               global_step=i)
+
+                v = batch_size
+                valid_conf_matrix = None
+
+                if (batch_size > n_valid_count):
+                    v = n_valid_count
+
+                while (v <= n_valid_count):
+
+                    # Validation set reporting
+                    # print ('Validation on batch:' + str(v))
+
+                    npValInputs = np.load(valid_bottleneck_dir + 'bottleneck_batch_' + str(v) + '.npy')
+                    npValLabels = np.load(valid_bottleneck_dir + 'bottleneck_batch_label_' + str(v) + '.npy')
+
+                    npValInputs2 = np.reshape(npValInputs,
+                                              [npValInputs.shape[0] * npValInputs.shape[1], npValInputs.shape[2]])
+                    npValLabels2 = np.reshape(npValLabels, [npValLabels.shape[0]])
+
+                    _, conf_matrix, _ = sess.run(
+                        [evaluation_step, confusion_matrix, predicted_indices],
+                        feed_dict={
+                            bottleneck_input: npValInputs2,
+                            ground_truth_retrain_input: npValLabels2,
+
+                        })
+
+                    if (valid_conf_matrix is None):
+                        valid_conf_matrix = conf_matrix
+                    else:
+                        valid_conf_matrix += conf_matrix
+
+                    if (v == n_valid_count):
+                        break
+
+                    if (v + batch_size > n_valid_count):
+                        v = n_valid_count
+                    else:
+                        v = v + batch_size
+
+                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
+                true_pos = np.sum(np.diag(valid_conf_matrix))
+                all_pos = np.sum(valid_conf_matrix)
+                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+
+        print('Creating new complete graph')
+        base_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=chkpoint_dir + 'base_dir/')
+        version_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=retrain_chkpoint_dir)
+
+        print('Base checkpoint graph is:' + base_checkpoint_file)
+        print('Version checkpoint graph is:' + version_checkpoint_file)
+
+        # Should go back to the habits.py module
+        self.rebuild_graph_post_transfer_learn(ncep=ncep, nfft=nfft, cutoff_mfcc=cutoff_mfcc,
+                                               cutoff_spectogram=cutoff_spectogram, label_count=label_count,
+                                               isTraining=isTraining
+                                               , base_chkpoint_file=base_checkpoint_file,
+                                               version_chkpoint_file=version_checkpoint_file, use_nfft=use_nfft,
+                                               chkpoint_dir=chkpoint_dir)
+
+
+
+
+
+
 
 class AudioEventDetectionVGG(object):
 
@@ -258,440 +712,6 @@ class AudioEventDetectionVGG(object):
                 true_pos = np.sum(np.diag(val_conf_matrix))
                 all_pos = np.sum(val_conf_matrix)
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-
-class AudioEventDetectionTutorial(AudioEventDetectionSuper):
-
-    def __init__(self,conf_object):
-        super(AudioEventDetectionTutorial,self).__init__(conf_object=conf_object)
-
-
-    def build_graph(self, fingerprint_input):
-
-        if (self.conf_object.use_nfft):
-            input_time_size = self.conf_object.cutoff_spectogram
-            input_frequency_size = self.conf_object.nfft
-        else:
-            input_time_size = self.conf_object.cutoff_mfcc
-            input_frequency_size = self.conf_object.ncep
-
-
-
-        # Hyper Parameters!
-        first_filter_width = 8
-        first_filter_height = input_time_size
-        first_filter_count = 186
-        first_filter_stride_x = 1
-        first_filter_stride_y = 1
-
-        with tf.variable_scope('tutorial_layer_one', reuse=tf.AUTO_REUSE):
-
-            fingerprint_4d = tf.reshape(fingerprint_input,
-                                        [-1, input_time_size, input_frequency_size, 1])
-
-            dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-            l1b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
-            l1w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
-
-            first_weights = tf.get_variable(name="weight_one",
-                                            shape=[first_filter_height, first_filter_width, 1, first_filter_count],
-                                            dtype=tf.float32,
-                                            initializer=l1w_init,
-                                            )
-            first_bias = tf.get_variable(name="bias_one", shape=[first_filter_count], dtype=tf.float32,
-                                         initializer=l1b_init)
-            first_conv = tf.nn.conv2d(fingerprint_4d, first_weights,
-                                      [1, first_filter_stride_y, first_filter_stride_x, 1], 'VALID') + first_bias
-            first_relu = tf.nn.relu(first_conv)
-
-            if self.conf_object.is_training:
-                first_dropout = tf.nn.dropout(first_relu, dropout_prob)
-            else:
-                first_dropout = first_relu
-
-        first_conv_output_width = math.floor(
-            (input_frequency_size - first_filter_width + first_filter_stride_x) /
-            first_filter_stride_x)
-        first_conv_output_height = math.floor(
-            (input_time_size - first_filter_height + first_filter_stride_y) /
-            first_filter_stride_y)
-        first_conv_element_count = int(
-            first_conv_output_width * first_conv_output_height * first_filter_count)
-        flattened_first_conv = tf.reshape(first_dropout, [-1, first_conv_element_count])
-
-        first_fc_output_channels = 128
-
-        with tf.variable_scope('layer_two', reuse=tf.AUTO_REUSE):
-            l2b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
-            l2w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
-
-            first_fc_weights = tf.get_variable(name="weight_two",
-                                               shape=[first_conv_element_count, first_fc_output_channels],
-                                               dtype=tf.float32, initializer=l2w_init)
-            first_fc_bias = tf.get_variable(name="bias_two", shape=[first_fc_output_channels], dtype=tf.float32,
-                                            initializer=l2b_init)
-            first_fc = tf.matmul(flattened_first_conv, first_fc_weights) + first_fc_bias
-
-            if isTraining:
-                second_fc_input = tf.nn.dropout(first_fc, dropout_prob)
-            else:
-                second_fc_input = first_fc
-
-        second_fc_output_channels = 128  # number of cols in bottleneck tensor
-
-        with tf.variable_scope('layer_three', reuse=tf.AUTO_REUSE):
-            l3b_init = tf.random_normal_initializer(mean=0, stddev=0.1, dtype=tf.float32)
-            l3w_init = tf.contrib.layers.xavier_initializer(uniform=False, dtype=tf.float32)
-
-            second_fc_weights = tf.get_variable(name="weight_three",
-                                                shape=[first_fc_output_channels, second_fc_output_channels],
-                                                dtype=tf.float32, initializer=l3w_init)
-            second_fc_bias = tf.get_variable(name="bias_three", shape=[second_fc_output_channels], dtype=tf.float32,
-                                             initializer=l3b_init)
-            second_fc = tf.matmul(second_fc_input, second_fc_weights) + second_fc_bias
-
-            if isTraining:
-                final_fc_input = tf.nn.dropout(second_fc, dropout_prob)
-            else:
-                final_fc_input = second_fc
-
-        # The bottleneck tensor is final_fc_input
-        return final_fc_input, first_weights, first_bias, first_fc_weights, first_fc_bias, second_fc_weights, second_fc_bias
-
-    def build_final_layer_graph(self, bottleneck_input):
-
-        label_count = self.conf_object.num_labels
-
-        ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-        Builds the final layer with number of cells = label count, this will need to be retrained with every new label
-        '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-        second_fc_output_channels = 128
-        ground_truth_name = 'ground_truth_retrain_label_' + str(label_count)
-
-        with tf.variable_scope('layer_four', reuse=tf.AUTO_REUSE):
-            l4b_init = tf.random_normal_initializer(mean=0, stddev=0.0, dtype=tf.float32)
-            l4w_init = tf.contrib.layers.xavier_initializer(uniform=True, dtype=tf.float32)
-            final_fc_weights = tf.get_variable(name="weight_four",
-                                               shape=[second_fc_output_channels, label_count], dtype=tf.float32,
-                                               initializer=l4w_init)
-            final_fc_bias = tf.get_variable(name="bias_four", shape=[label_count], dtype=tf.float32,
-                                            initializer=l4b_init)
-            final_fc = tf.matmul(bottleneck_input, final_fc_weights) + final_fc_bias
-
-        ground_truth_retrain_input = tf.placeholder(dtype=tf.int64, shape=[None], name=ground_truth_name)
-
-        # The final result - a softmax can be applied to this for inference
-        return final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias
-
-    def retrain(self, train_bottleneck_dir, valid_bottleneck_dir, label_count, ncep, nfft, cutoff_mfcc,
-                cutoff_spectogram,
-                isTraining, batch_size, n_count, n_valid_count, epochs, chkpoint_dir, learning_input=0.001,
-                use_nfft=True):
-
-        print(
-            'Starting re-training with following parameters:' + ' train count: ' + str(n_count) + ' valid count ' + str(
-                n_valid_count))
-
-        uu_id = uuid.uuid4()
-        retrain_chkpoint_dir = chkpoint_dir + 'tmp/version_model_labels_' + str(label_count) + '_time_' + str(
-            uu_id) + '/'
-
-        with tf.Graph().as_default() as grap:
-
-            second_fc_output_channels = 128
-
-            bottleneck_input = tf.placeholder(dtype=tf.float32, shape=[None, second_fc_output_channels],
-                                              name='bottleneck_input')
-            final_fc, bottleneck_input, ground_truth_retrain_input, final_fc_weights, final_fc_bias \
-                = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                               bottleneck_input=bottleneck_input)
-
-            with tf.name_scope('cross_entropy'):
-                cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
-                    labels=ground_truth_retrain_input, logits=final_fc)
-
-            with tf.name_scope('train'):
-                learning_rate_input = tf.placeholder(
-                    tf.float32, [], name='learning_rate_input')
-                train_step = tf.train.GradientDescentOptimizer(
-                    learning_rate_input).minimize(cross_entropy_mean)
-
-            predicted_indices = tf.argmax(final_fc, 1)
-            correct_prediction = tf.equal(predicted_indices, ground_truth_retrain_input)
-            confusion_matrix = tf.confusion_matrix(
-                ground_truth_retrain_input, predicted_indices, num_classes=label_count)
-            evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-        with tf.Session(graph=grap) as sess:
-
-            saver = tf.train.Saver()
-            init = tf.global_variables_initializer()
-            sess.run(init)
-
-            '''
-            ' Useful debugging below ' 
-            # Check that only part of the graph is restored 
-            var_name = [v.name for v in tf.global_variables()]
-            print(var_name)
-
-            varb = grap.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-            print (varb)
-
-            val = [sess.run(v) for v in varb]
-            print(val)
-            '''
-
-            for i in range(1, epochs + 1):
-                total_conf_matrix = None
-
-                j = batch_size
-                while (j <= n_count):
-
-                    # print ('Training batch:' + str(j))
-
-                    npInputs = np.load(train_bottleneck_dir + 'bottleneck_batch' + '_' + str(j) + '.npy')
-                    npLabels = np.load(train_bottleneck_dir + 'bottleneck_batch_label' + '_' + str(j) + '.npy')
-
-                    npInputs2 = np.reshape(npInputs, [npInputs.shape[0] * npInputs.shape[1], npInputs.shape[2]])
-                    npLabels2 = np.reshape(npLabels, [npLabels.shape[0]])
-
-                    xent_mean, _, conf_matrix = sess.run(
-                        [
-                            cross_entropy_mean, train_step,
-                            confusion_matrix
-                        ],
-                        feed_dict={
-                            bottleneck_input: npInputs2,
-                            ground_truth_retrain_input: npLabels2,
-                            learning_rate_input: learning_input,
-                        })
-
-                    if total_conf_matrix is None:
-                        total_conf_matrix = conf_matrix
-                    else:
-                        total_conf_matrix += conf_matrix
-
-                    if (j == n_count):
-                        break
-
-                    if (j + batch_size > n_count):
-                        j = n_count
-                    else:
-                        j = j + batch_size
-
-                print('Epoch:' + str(i))
-                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
-
-                # Save after every 10 epochs
-                if (i % 10 == 0):
-                    print('Saving checkpoint')
-                    saver.save(sess=sess, save_path=retrain_chkpoint_dir + 'model_labels_' + str(label_count) + '.ckpt',
-                               global_step=i)
-
-                v = batch_size
-                valid_conf_matrix = None
-
-                if (batch_size > n_valid_count):
-                    v = n_valid_count
-
-                while (v <= n_valid_count):
-
-                    # Validation set reporting
-                    # print ('Validation on batch:' + str(v))
-
-                    npValInputs = np.load(valid_bottleneck_dir + 'bottleneck_batch_' + str(v) + '.npy')
-                    npValLabels = np.load(valid_bottleneck_dir + 'bottleneck_batch_label_' + str(v) + '.npy')
-
-                    npValInputs2 = np.reshape(npValInputs,
-                                              [npValInputs.shape[0] * npValInputs.shape[1], npValInputs.shape[2]])
-                    npValLabels2 = np.reshape(npValLabels, [npValLabels.shape[0]])
-
-                    _, conf_matrix, _ = sess.run(
-                        [evaluation_step, confusion_matrix, predicted_indices],
-                        feed_dict={
-                            bottleneck_input: npValInputs2,
-                            ground_truth_retrain_input: npValLabels2,
-
-                        })
-
-                    if (valid_conf_matrix is None):
-                        valid_conf_matrix = conf_matrix
-                    else:
-                        valid_conf_matrix += conf_matrix
-
-                    if (v == n_valid_count):
-                        break
-
-                    if (v + batch_size > n_valid_count):
-                        v = n_valid_count
-                    else:
-                        v = v + batch_size
-
-                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
-                true_pos = np.sum(np.diag(valid_conf_matrix))
-                all_pos = np.sum(valid_conf_matrix)
-                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-        print('Creating new complete graph')
-        base_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=chkpoint_dir + 'base_dir/')
-        version_checkpoint_file = model_helper.get_checkpoint_file(checkpoint_dir=retrain_chkpoint_dir)
-
-        print('Base checkpoint graph is:' + base_checkpoint_file)
-        print('Version checkpoint graph is:' + version_checkpoint_file)
-
-        # Should go back to the habits.py module
-        self.rebuild_graph_post_transfer_learn(ncep=ncep, nfft=nfft, cutoff_mfcc=cutoff_mfcc,
-                                               cutoff_spectogram=cutoff_spectogram, label_count=label_count,
-                                               isTraining=isTraining
-                                               , base_chkpoint_file=base_checkpoint_file,
-                                               version_chkpoint_file=version_checkpoint_file, use_nfft=use_nfft,
-                                               chkpoint_dir=chkpoint_dir)
-
-    def base_train(self,  train_folder, validate_folder,
-                   n_train, n_valid, learning_rate=0.001, dropoutprob=0.5):
-
-        ncep, nfft, max_len, label_count, isTraining, batch_size,
-        epochs, chkpoint_dir, use_nfft = True,
-
-        sess = tf.InteractiveSession()
-
-        if (use_nfft):
-            input_size = nfft
-        else:
-            input_size = ncep
-
-        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, max_len * input_size],
-                                           name="fingerprint_input")
-
-        bottleneck_input, _, _, _, _, _, _ = self.build_graph(fingerprint_input=fingerprint_input,
-                                                              dropout_prob=dropout_prob, ncep=ncep, nfft=nfft,
-                                                              max_len=max_len, isTraining=isTraining, use_nfft=use_nfft)
-        final_fc, _, _, _, _ = self.build_final_layer_graph(label_count=label_count, isTraining=isTraining,
-                                                            bottleneck_input=bottleneck_input)
-
-        # Define loss and optimizer
-        ground_truth_input = tf.placeholder(
-            tf.int64, [None], name='groundtruth_input')
-
-        # Create the back propagation and training evaluation machinery in the graph.
-        with tf.name_scope('cross_entropy'):
-            cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
-                labels=ground_truth_input, logits=final_fc)
-        tf.summary.scalar('cross_entropy', cross_entropy_mean)
-        with tf.name_scope('train'):
-            learning_rate_input = tf.placeholder(
-                tf.float32, [], name='learning_rate_input')
-            train_step = tf.train.GradientDescentOptimizer(
-                learning_rate_input).minimize(cross_entropy_mean)
-
-        predicted_indices = tf.argmax(final_fc, 1)
-        correct_prediction = tf.equal(predicted_indices, ground_truth_input)
-        confusion_matrix = tf.confusion_matrix(
-            ground_truth_input, predicted_indices, num_classes=label_count)
-        evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        tf.summary.scalar('accuracy', evaluation_step)
-
-        global_step = tf.train.get_or_create_global_step()
-        increment_global_step = tf.assign(global_step, global_step + 1)
-
-        # For checkpoints
-        saver = tf.train.Saver()
-
-        init = tf.global_variables_initializer()
-        sess.run(init)
-
-        for i in range(1, epochs + 1):
-            total_conf_matrix = None
-
-            print('Epoch is: ' + str(i))
-
-            j = batch_size
-            while (j <= n_train):
-
-                npInputs = np.load(
-                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(j) + '.npy')
-                npLabels = np.load(
-                    train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
-                        j) + '.npy'),
-
-                npInputs2 = np.reshape(npInputs, [-1, max_len * input_size])
-                xent_mean, _, _, conf_matrix = sess.run(
-                    [
-                        cross_entropy_mean, train_step,
-                        increment_global_step, confusion_matrix
-                    ],
-                    feed_dict={
-                        fingerprint_input: npInputs2,
-                        ground_truth_input: npLabels[0],
-                        learning_rate_input: learning_rate,
-                        dropout_prob: dropoutprob,
-                    })
-
-                if total_conf_matrix is None:
-                    total_conf_matrix = conf_matrix
-                else:
-                    total_conf_matrix += conf_matrix
-
-                if (j == n_train):
-                    break
-
-                if (j + batch_size > n_train):
-                    j = n_train
-                else:
-                    j = j + batch_size
-
-            print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
-
-            # Save after every 10 epochs
-            if (i % 10 == 0):
-                print('Saving checkpoint for epoch:' + str(i))
-                saver.save(sess=sess, save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',
-                           global_step=i)
-
-            # Validation set reporting
-            v = batch_size
-            valid_conf_matrix = None
-            if (batch_size > n_valid):
-                v = n_valid
-
-            while (v <= n_valid):
-
-                npValInputs = np.load(
-                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
-                npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
-
-                npValLabels = np.load(
-                    validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
-                        v) + '.npy')
-                test_accuracy, conf_matrix, pred_indices = sess.run(
-                    [evaluation_step, confusion_matrix, predicted_indices],
-                    feed_dict={
-                        fingerprint_input: npValInputs,
-                        ground_truth_input: npValLabels,
-                        dropout_prob: 1.0
-                    })
-
-                if (valid_conf_matrix is None):
-                    valid_conf_matrix = conf_matrix
-                else:
-                    valid_conf_matrix += conf_matrix
-
-                if (v == n_valid):
-                    break
-
-                if (v + batch_size > n_valid):
-                    v = n_valid
-                else:
-                    v = v + batch_size
-
-            print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
-            true_pos = np.sum(np.diag(valid_conf_matrix))
-            all_pos = np.sum(valid_conf_matrix)
-            print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-
 
 
 class AudioEventDetectionResnet(AudioEventDetectionSuper):
