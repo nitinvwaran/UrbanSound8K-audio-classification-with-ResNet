@@ -37,7 +37,7 @@ class Configuration(object):
 
         self.is_training = is_training
 
-
+'''
 class ResNetConfiguration(object):
     def __init__(self,resnet_size, num_classes, num_filters,kernel_size,
                  conv_stride, first_pool_size, first_pool_stride,
@@ -57,6 +57,7 @@ class ResNetConfiguration(object):
         self.resnet_version = resnet_version
         self.data_format = data_format
         self.dtype = dtype
+'''
 
 
 

@@ -967,7 +967,7 @@ class AudioEventDetectionVGG(object):
                 all_pos = np.sum(val_conf_matrix)
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
 
-
+'''
 class AudioEventDetectionResnet(AudioEventDetectionSuper):
 
     def __init__(self,conf_object,resnet_conf_object):
@@ -1110,14 +1110,8 @@ class AudioEventDetectionResnet(AudioEventDetectionSuper):
 
             inputs = tf.identity(inputs, 'final_dense')
             return inputs
-
-
-
-
-
-
-
-    def rebuild_graph_post_transfer_learn():
+    
+    '''
 
 
 if __name__ == '__main__':

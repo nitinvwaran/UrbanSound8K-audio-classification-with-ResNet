@@ -1,2 +1,0 @@
-model_checkpoint_path: "/home/nitin/PycharmProjects/habits/checkpoints/habits/transfer_model_label_count_3.ckpt"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/habits/transfer_model_label_count_3.ckpt"

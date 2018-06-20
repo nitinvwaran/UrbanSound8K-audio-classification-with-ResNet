@@ -117,9 +117,16 @@ class CommonHelpers(object):
 
     def get_labels_and_count(self,label_file):
 
+        """
+        @type label_file:str
+        :param label_file:
+        :return:
+        """
+
+        print ('Label file is:'+ label_file)
         dict_labels = {}
         num_labels = 0
-        with open (label_file,'r') as labelfile:
+        with open (str(label_file),'r') as labelfile:
             data = labelfile.readlines()
 
             for line in data:
@@ -130,6 +137,12 @@ class CommonHelpers(object):
 
     def reset_folder_make_new(self,file_dir, label_count):
 
+        """
+        @:type label_count: int
+        :param file_dir:
+        :param label_count: the label count
+        :return:
+        """
         version_out_dir = file_dir + 'batch_label_count_' + str(label_count) + '/'
 
         # Make a new directory, if this is a new graph version, to store all the batches in there for the new graph version
@@ -246,8 +259,13 @@ class InputRaw(object):
         i = 0
         inputs = []
         labels = []
-        num_labels, labels_meta = common_helpers.get_labels_and_count(label_file)
+
+        #num_labels, labels_meta = common_helpers.get_labels_and_count(label_file)
+        num_labels = conf_object.num_labels
+        labels_meta = conf_object.labels_dict
+
         version_out_dir = common_helpers.reset_folder_make_new(out_dir, label_count)
+
 
         print ('Count of files in training directory' + file_dir + ' is: ' + str(file_count))
         print ('Preparing the numpy batches to the directory:' + version_out_dir)

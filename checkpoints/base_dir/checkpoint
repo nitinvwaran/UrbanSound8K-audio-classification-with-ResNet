@@ -1,6 +1,0 @@
-model_checkpoint_path: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-100"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-60"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-70"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-80"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-90"
-all_model_checkpoint_paths: "/home/nitin/PycharmProjects/habits/checkpoints/base_dir/base_model_labels_2.ckpt-100"

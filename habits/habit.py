@@ -214,24 +214,24 @@ def main():
     ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
     batch_size = 1000
-    train_directory = '/home/ubuntu/Desktop/vggish/train/'
-    validate_directory = '/home/ubuntu/Desktop/vggish/valid/'
-    test_directory = '/home/ubuntu/Desktop/vggish/test'
-    train_bottleneck_dir = '/home/ubuntu/Desktop/vggish/xferfiles/'
-    validate_bottleneck_dir = '/home/ubuntu/Desktop/vggish/xferfiles_valid/'
+    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train/'
+    validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
+    test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test'
+    train_bottleneck_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/xferfiles/'
+    validate_bottleneck_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/xferfiles_valid/'
     test_bottleneck_dir = 'x'
-    checkpoint_base_dir = '/home/ubuntu/Desktop/aws_habits/FMSG_Habits/checkpoints/'
-    label_meta_file_path = '/home/ubuntu/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
+    checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
+    label_meta_file_path = '/home/nitin/PycharmProjects/habits/habits/labels_meta/labels_meta.txt'
     do_scratch_training = True
     do_transfer_training = False
     number_cepstrums = 13
     nfft_value = (512 / 2) + 1 # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
-    regenerate_training_inputs = False
+    regenerate_training_inputs = True
     regenerate_test_inputs = False
     cutoff_spectogram = 300
     cutoff_mfcc = 99
-    use_nfft = False
-    num_epochs = 100
+    use_nfft = True
+    num_epochs = 30
     is_training = True
 
     conf_object = Configuration(train_directory=train_directory,validate_directory=validate_directory,test_directory=test_directory,train_bottleneck_dir=train_bottleneck_dir,
@@ -242,7 +242,7 @@ def main():
                         ,num_epochs = num_epochs
                         )
 
-    aed = AudioEventDetectionSuper()
+    aed = AudioEventDetectionSuper(conf_object=conf_object)
 
     run_validations(conf_object)
 
@@ -252,6 +252,8 @@ def main():
 
     conf_object.num_labels = num_labels
     conf_object.labels_dict = label_dict
+
+    print('Starting Scratch Training')
 
     if (conf_object.do_scratch_training):
 
