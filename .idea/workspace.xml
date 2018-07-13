@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/mel_features.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_inference_demo.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_input.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_params.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_postprocess.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_slim.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_smoke_test.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/audioset/vggish_train_demo.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/habits_frozen.pb" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/habit.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/habit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/inputs_2.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/inputs_2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/habits/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/habits/model.py" afterDir="false" />
-    </list>
+    <list default="true" id="1694245a-acbe-4033-b985-f066ccde2879" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -29,7 +14,7 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/habits/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="366">
+            <state relative-caret-position="161">
               <caret line="72" column="43" lean-forward="true" selection-start-line="72" selection-start-column="43" selection-end-line="72" selection-end-column="43" />
               <folding>
                 <element signature="e#0#23#0" expanded="true" />
@@ -340,17 +325,17 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="67" y="25" width="1725" height="1089" extended-state="6" />
+    <frame x="67" y="25" width="2493" height="1295" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.14806111" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994664" visible="true" weight="0.102024294" />
       <window_info anchor="bottom" id="TODO" order="5" />
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3319012" />
-      <window_info active="true" anchor="bottom" x="67" y="55" width="1717" height="1065" id="Run" order="11" visible="true" weight="0.54027927" />
+      <window_info anchor="bottom" x="67" y="55" width="1717" height="1065" id="Run" order="11" weight="0.54027927" />
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Python Console" order="9" weight="0.32870865" />
       <window_info id="Structure" order="1" sideWeight="0.50053364" side_tool="true" weight="0.1466188" />
-      <window_info anchor="bottom" id="Terminal" order="10" weight="0.20837809" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.38698328" />
       <window_info anchor="bottom" id="Debug" order="2" weight="0.4" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -729,7 +714,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/habits/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="366">
+        <state relative-caret-position="161">
           <caret line="72" column="43" lean-forward="true" selection-start-line="72" selection-start-column="43" selection-end-line="72" selection-end-column="43" />
           <folding>
             <element signature="e#0#23#0" expanded="true" />
