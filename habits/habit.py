@@ -149,9 +149,9 @@ def main():
 
     do_scratch_training = True
     number_cepstrums = 26
-    nfft_value = 256  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
-    regenerate_training_inputs = True
-    regenerate_test_inputs = True
+    nfft_value = 256
+    regenerate_training_inputs = False
+    regenerate_test_inputs = False
     cutoff_spectogram = 100
     cutoff_mfcc = 150
     use_nfft = True
