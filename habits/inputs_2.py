@@ -5,6 +5,7 @@ import python_speech_features as pspeech
 import numpy as np
 import scipy.signal as sig
 import shutil
+import librosa
 
 class CommonHelpers(object):
 
@@ -86,7 +87,20 @@ class InputRaw(object):
 
         return nparr_mfcc,nparr_specgram
 
+    def prepare_log_mel_spectogram(self,file_dir,file_name,cutoff_mel_spectogram,padding_value=0):
 
+        y, sr = librosa.load(file_dir + file_name, sr=None)
+        ps = librosa.feature.melspectrogram(y = y, sr = sr)
+        psnp = np.asarray(ps)
+
+        mel_spgm = psnp.transpose() # Time major
+        if (mel_spgm.shape[0] > cutoff_mel_spectogram):
+            mel_spgm = mel_spgm[:cutoff_mel_spectogram,:]
+
+        mel_padding = ((0,cutoff_mel_spectogram - mel_spgm.shape[0]),(0,0))
+        mel_padded_spgm = np.pad(mel_spgm,mel_padding,mode='constant',constant_values=padding_value)
+
+        return mel_padded_spgm
 
     def create_numpy_batches(self,file_dir,label_count,label_file,batch_size,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
 
@@ -109,11 +123,13 @@ class InputRaw(object):
 
         for file in glob.glob("*.wav"):
 
-            mfcc,spectogram = self.prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc = cutoff_mfcc,
+            mfcc,_ = self.prepare_mfcc_spectogram(file_dir = file_dir,file_name=file,ncep=ncep,nfft=nfft,cutoff_mfcc = cutoff_mfcc,
                                                            cutoff_spectogram=cutoff_spectogram)
 
+            mel_spectogram = self.prepare_log_mel_spectogram(file_dir = file_dir, file_name= file ,cutoff_mel_spectogram=cutoff_spectogram)
+
             if (use_nfft):
-                input_raw = spectogram.tolist()
+                input_raw = mel_spectogram.tolist()
 
             else:
                 input_raw = mfcc.tolist()
