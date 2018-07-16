@@ -129,29 +129,30 @@ def run_validations(label_meta_file_path,do_scratch_training, train_directory, v
 
 def main():
 
-    batch_size = 500
+    batch_size = 100
+    '''
     train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train/'
     validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
     test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/'
     checkpoint_base_dir = '/home/nitin/Desktop/aws_habits/FMSG_Habits/checkpoints/base_dir/'
     label_meta_file_path = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
-
-
     '''
+
+
     train_directory = '/home/ubuntu/Desktop/urbansound_data/train/'
     validate_directory = '/home/ubuntu/Desktop/urbansound_data/valid/'
     test_directory = '/home/ubuntu/Desktop/urbansound_data/test/'
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
-    '''
+
 
 
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
-    regenerate_training_inputs = False
-    regenerate_test_inputs = False
-    cutoff_spectogram = 126
+    regenerate_training_inputs = True
+    regenerate_test_inputs = True
+    cutoff_spectogram = 100
     cutoff_mfcc = 150
     use_nfft = True
     num_epochs = 100

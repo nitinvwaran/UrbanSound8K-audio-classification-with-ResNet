@@ -67,8 +67,8 @@ class AudioEventDetectionResnet(object):
             valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
 
-            #train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
-            #valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
+            train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+            valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
 
 
             if (os.path.exists(train_tensorboard_dir)):
@@ -103,11 +103,11 @@ class AudioEventDetectionResnet(object):
                             j) + '.npy')
                     npLabels = np.load(
                         train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
-                            j) + '.npy'),
+                            j) + '.npy')
 
-                    print ('Shapes of inputs and labels')
-                    print (npInputs.shape)
-                    print (npLabels[0].shape)
+                    #print ('Shapes of inputs and labels')
+                    #print (npInputs.shape)
+                    #print (npLabels.shape)
                     #print (npLabels[0][:10])
 
                     _, xent_mean, conf_matrix = sess.run(
@@ -117,7 +117,7 @@ class AudioEventDetectionResnet(object):
                         ],
                         feed_dict={
                             fingerprint_input: npInputs,
-                            ground_truth_input: npLabels[0],
+                            ground_truth_input: npLabels,
                             learning_rate_input: learning_rate,
                             dropout_prob: dropoutprob,
                             is_training: True
@@ -177,15 +177,15 @@ class AudioEventDetectionResnet(object):
                         validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
                             v) + '.npy')
 
-                    print (npValInputs.shape)
-                    print (npValLabels[0].shape)
+                    #print (npValInputs.shape)
+                    #print (npValLabels.shape)
                     #print (npValLabels[:10])
 
                     _, conf_matrix = sess.run(
                         [evaluation_step, confusion_matrix],
                         feed_dict={
                             fingerprint_input: npValInputs,
-                            ground_truth_input: npValLabels[0],
+                            ground_truth_input: npValLabels,
                             dropout_prob: 1.0,
                             is_training: False
                         })

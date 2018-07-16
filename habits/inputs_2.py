@@ -89,6 +89,8 @@ class InputRaw(object):
 
     def prepare_log_mel_spectogram(self,file_dir,file_name,cutoff_mel_spectogram,padding_value=0):
 
+        eps = 1e-10
+
         y, sr = librosa.load(file_dir + file_name, sr=None)
         ps = librosa.feature.melspectrogram(y = y, sr = sr)
         psnp = np.asarray(ps)
@@ -99,8 +101,9 @@ class InputRaw(object):
 
         mel_padding = ((0,cutoff_mel_spectogram - mel_spgm.shape[0]),(0,0))
         mel_padded_spgm = np.pad(mel_spgm,mel_padding,mode='constant',constant_values=padding_value)
+        log_mel_pad_spgm = np.log(mel_padded_spgm + eps)
 
-        return mel_padded_spgm
+        return log_mel_pad_spgm
 
     def create_numpy_batches(self,file_dir,label_count,label_file,batch_size,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
 
