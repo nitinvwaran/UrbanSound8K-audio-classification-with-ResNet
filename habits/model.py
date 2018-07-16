@@ -33,8 +33,12 @@ class AudioEventDetectionResnet(object):
             learning_rate_input = tf.placeholder(
                 tf.float32, [], name='learning_rate_input')
 
-            train_step = tf.train.AdamOptimizer(
-                learning_rate_input).minimize(cross_entropy_mean)
+            loss = tf.reduce_mean(cross_entropy_mean,name="cross_entropy_loss")
+
+            extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)  # For batch normalization ops update
+            with tf.control_dependencies(extra_update_ops):
+                train_step = tf.train.AdamOptimizer(
+                    learning_rate_input).minimize(loss)
 
             predicted_indices = tf.argmax(logits, 1, name="predicted_indices")
             correct_prediction = tf.equal(predicted_indices, ground_truth_input, name='correct_prediction')
