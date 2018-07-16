@@ -50,11 +50,9 @@ class AudioEventDetectionResnet(object):
                    first_pool_stride,first_pool_size,block_sizes,final_size,resnet_version,data_format):
 
         with tf.Graph().as_default() as grap:
-            logits, fingerprint_input, dropout_prob \
-                = self.build_graph(ncep=ncep,nfft=nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,use_nfft=use_nfft,is_training=isTraining
-                                   ,bottleneck=bottleneck,num_classes = label_count,num_filters = num_filters,kernel_size = kernel_size,conv_stride = conv_stride
-                                   ,first_pool_stride = first_pool_stride,first_pool_size = first_pool_size,block_sizes = block_sizes,final_size = final_size,
-                                   resnet_version=resnet_version,data_format=data_format)
+            logits, fingerprint_input, dropout_prob ,is_training \
+                = self.build_graph(use_nfft = use_nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,nfft=nfft,
+                                   ncep=ncep,num_labels=label_count,data_format=data_format)
 
             ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean \
                 = self.build_loss_optimizer(logits,label_count)
@@ -115,6 +113,7 @@ class AudioEventDetectionResnet(object):
                             ground_truth_input: npLabels[0],
                             learning_rate_input: learning_rate,
                             dropout_prob: dropoutprob,
+                            is_training: True
                         })
 
                     xent_summary += np.sum(xent_mean)
@@ -180,7 +179,8 @@ class AudioEventDetectionResnet(object):
                         feed_dict={
                             fingerprint_input: npValInputs,
                             ground_truth_input: npValLabels,
-                            dropout_prob: 1.0
+                            dropout_prob: 1.0,
+                            is_training: False
                         })
 
                     if (valid_conf_matrix is None):
@@ -249,29 +249,171 @@ class AudioEventDetectionResnet(object):
 
 
 
+    # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py
+    def conv_function(self,x,filter_size, out_channel, strides, pad='SAME',name='conv',data_format = 'channels_last'):
+
+        in_shape = x.get_shape()
+        in_channels = in_shape[1] if data_format == 'channels_first' else in_shape[3]
+        std = [1,strides,strides,1] if data_format == 'channels_last' else [1,1,strides,strides]
+        with tf.variable_scope(name): # different name for each kernel variable
+            kernel = tf.get_variable(name='kernel', shape= [filter_size, filter_size, in_channels, out_channel],
+                                     dtype = tf.float32, initializer=tf.random_normal_initializer(stddev=np.sqrt(2.0 / filter_size / filter_size / out_channel)))
+            conv = tf.nn.conv2d(x,filter=kernel,strides=std,padding=pad,name="conv_tensor")
+
+        return conv
 
 
+
+    # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py
+    def residual_block_resampled(self,x,filter_size, out_channel,strides,isTraining,data_format='channels_last', name="unit"):
+
+        channel_idx = -1 if data_format == 'channels_last' else 1
+        in_channel = x.get_shape().as_list()[channel_idx]
+        with tf.variable_scope(name) as scope:
+            print('\tBuilding residual unit: %s' % scope.name)
+
+            # Shortcut connection
+            if in_channel == out_channel:
+                if strides == 1:
+                    shortcut = tf.identity(x,name="shortcut")
+                else:
+                    shortcut = tf.nn.max_pool(value= x, ksize=[1, strides, strides, 1], strides = [1, strides, strides, 1], padding = 'VALID',name="shortcut")
+            else:
+                shortcut = self.conv_function(x,1,out_channel,strides,name="shortcut")
+
+            x = self.conv_function(x=x,filter_size=filter_size,out_channel = out_channel,strides=strides,name='conv_1')
+            x = tf.layers.batch_normalization(inputs=x,training=isTraining,name="bn_1")
+            x = tf.nn.relu(features=x,name="relu_1")
+
+            x = self.conv_function(x=x,filter_size = filter_size,out_channel = out_channel,strides=1,name="conv_2")
+            x = tf.layers.batch_normalization(inputs=x,training=isTraining,name="bn_2")
+
+            x = x + shortcut # Adds the shortcut link before relu
+            x = tf.nn.relu(features=x,name="relu_2")
+
+        return x
+
+
+    # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py
+    def residual_block_normal(self,x,isTraining,data_format = 'channels_last',name="unit"):
+
+        filter_size = 3
+        strides = 1
+
+        channels_idx = -1 if data_format == 'channels_last' else 1
+        num_channel = x.get_shape().as_list()[channels_idx]
+        with tf.variable_scope(name) as scope:
+            print('\tBuilding residual unit: %s' % scope.name)
+
+            shortcut = x # No tf.identity?
+            x = self.conv_function(x=x,filter_size=filter_size,out_channel=num_channel,strides=strides,name="conv_1")
+            x = tf.layers.batch_normalization(inputs=x,training=isTraining,name="bn_1")
+            x = tf.nn.relu(features=x,name="relu_1")
+
+            x = self.conv_function(x=x, filter_size=filter_size, out_channel=num_channel, strides=strides,
+                                   name="conv_2")
+            x = tf.layers.batch_normalization(inputs=x, training=isTraining, name="bn_2")
+
+            x = x + shortcut
+            x = tf.nn.relu(features=x,name="relu_2")
+
+        return x
+
+
+    def build_graph(self,use_nfft,cutoff_spectogram,cutoff_mfcc,nfft,ncep,num_labels,data_format='channels_last'):
+
+        if (use_nfft):
+            input_time_size = cutoff_spectogram
+            input_frequency_size = (nfft / 2) + 1
+        else:
+            input_time_size = cutoff_mfcc
+            input_frequency_size = ncep
+
+        print('Input Time Size:' + str(input_time_size))
+        print('Input Frequency Size:' + str(input_frequency_size))
+
+        # Only declared as expected by the base class
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+        fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, input_time_size, input_frequency_size],
+                                           name="fingerprint_input")
+        is_training = tf.placeholder(dtype=tf.bool,name="is_training")
+
+        #TODO: Add 4th dimension to the input
+        fingerprint_input_4D = tf.expand_dims(fingerprint_input,axis=3,name="fngerprint_4D")
+        print (fingerprint_input_4D)
+
+        print ('Building graph ResNet-18')
+        channel_sizes = [64, 64, 128, 256, 512]
+        kernels_sizes = [7, 3, 3, 3, 3]
+        strides = [2, 0, 2, 2, 2]
+
+        with tf.variable_scope('conv_layer_1'):
+            print ('Building unit conv_layer_1')
+
+            x = self.conv_function(x=fingerprint_input_4D,filter_size=kernels_sizes[0],out_channel = channel_sizes[0],strides=strides[0],name="conv_1",data_format=data_format)
+            x = tf.layers.batch_normalization(inputs=x,training=is_training,name="bn_1")
+            x = tf.nn.relu(features=x,name="relu_1")
+
+            ksize = 3
+            strd = 2
+
+            x = tf.nn.max_pool(x, [1, ksize, ksize, 1], [1, strd, strd, 1], 'SAME')
+
+
+        with tf.variable_scope('conv_layer_2'):
+            x = self.residual_block_normal(x = x,name="resnormal_1",isTraining=is_training,data_format=data_format)
+            x = self.residual_block_normal(x = x,name="resnormal_2",isTraining=is_training,data_format=data_format)
+
+        with tf.variable_scope('conv_layer_3'):
+            x = self.residual_block_resampled(x = x,filter_size = kernels_sizes[2],out_channel = channel_sizes[2],strides=strides[2],
+                                              data_format=data_format,name="ressampled_1",isTraining=is_training)
+            x = self.residual_block_normal(x=x,data_format=data_format,name="resnormal_1",isTraining=is_training)
+
+        with tf.variable_scope('conv_layer_4'):
+            x = self.residual_block_resampled(x = x,filter_size=kernels_sizes[3],out_channel=channel_sizes[3],strides=strides[3],
+                                              data_format=data_format,name="ressampled_1",isTraining=is_training)
+            x = self.residual_block_normal(x = x,data_format=data_format,name="resnormal_1",isTraining=is_training)
+
+        with tf.variable_scope('conv_layer_5'):
+            x = self.residual_block_resampled(x=x,filter_size=kernels_sizes[4],out_channel=channel_sizes[4],strides=strides[4],
+                                              data_format=data_format,name='ressampled_1',isTraining=is_training)
+            x = self.residual_block_normal(x = x,data_format=data_format,name="resnormal_1",isTraining=is_training)
+
+
+        with tf.variable_scope('layer_final'):
+
+            mean_axes = [1,2] if data_format == 'channels_last' else [2,3]
+
+            x = tf.reduce_mean(input_tensor=x,axis=mean_axes,name="reduced_tensor")
+            x = tf.layers.dense(inputs=x,units=num_labels,use_bias=True)
+
+        return x, fingerprint_input,dropout_prob, is_training
+
+
+
+
+
+    '''
     def build_graph(self, ncep, nfft, cutoff_spectogram, cutoff_mfcc, use_nfft,  is_training, bottleneck, num_classes, num_filters,
                     kernel_size, conv_stride, first_pool_stride, first_pool_size, block_sizes, final_size, resnet_version, data_format):
 
 
-        '''
-        print ('Resnet parameters:')
-        print ('Resnet Version:' + str(resnet_version))
-        print ('Use Nfft:' + str(use_nfft))
-        print ('Is Training:' + str(is_training))
-        print('Bottleneck:' + str(bottleneck))
-        print('Num Classes:' + str(num_classes))
-        print('Num Filters:' + str(num_filters))
-        print('Kernel Size:' + str(kernel_size))
-        print('Conv Stride:' + str(conv_stride))
-        print('First Pool Stride:' + str(first_pool_stride))
-        print('First Pool Size:' + str(first_pool_size))
-        print('Block Sizes:' + str(block_sizes))
-        print('Final Size:' + str(final_size))
-        print('Resnet Version:' + str(resnet_version))
-        print('Data Format:' + str(data_format))
-        '''
+        
+        #print ('Resnet parameters:')
+        #print ('Resnet Version:' + str(resnet_version))
+        ##print ('Is Training:' + str(is_training))
+        #print('Bottleneck:' + str(bottleneck))
+        #print('Num Classes:' + str(num_classes))
+        #print('Num Filters:' + str(num_filters))
+        #print('Kernel Size:' + str(kernel_size))
+        #print('Conv Stride:' + str(conv_stride))
+        #print('First Pool Stride:' + str(first_pool_stride))
+        #print('First Pool Size:' + str(first_pool_size))
+        #print('Block Sizes:' + str(block_sizes))
+        #print('Final Size:' + str(final_size))
+        #print('Resnet Version:' + str(resnet_version))
+        #print('Data Format:' + str(data_format))
+        
 
         if (resnet_version == 1 ):
             block_fn = _building_block_v1
@@ -299,6 +441,8 @@ class AudioEventDetectionResnet(object):
 
             # Added 4th dimension for number of channels
             inputs = tf.expand_dims(fingerprint_input,3)
+
+            print (inputs)
 
 
             inputs = conv2d_fixed_padding(inputs = inputs, filters = num_filters,kernel_size = kernel_size,strides = conv_stride,
@@ -334,6 +478,7 @@ class AudioEventDetectionResnet(object):
             #softmax = tf.nn.softmax(logits, name="softmax_op")
 
             return logits, fingerprint_input, dropout_prob
+            '''
 
 
 
