@@ -136,17 +136,26 @@ def main():
     checkpoint_base_dir = '/home/nitin/Desktop/aws_habits/FMSG_Habits/checkpoints/base_dir/'
     label_meta_file_path = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
 
+
+    train_directory = '/home/ubuntu/Desktop/urbansound_data/train/'
+    validate_directory = '/home/ubuntu/Desktop/urbansound_data/valid/'
+    test_directory = '/home/ubuntu/Desktop/urbansound_data/test/'
+    checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
+    label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
+
+
+
     do_scratch_training = True
-    number_cepstrums = 13
+    number_cepstrums = 26
     nfft_value = 512  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
-    regenerate_training_inputs = False
-    regenerate_test_inputs = False
+    regenerate_training_inputs = True
+    regenerate_test_inputs = True
     cutoff_spectogram = 300
-    cutoff_mfcc = 99
-    use_nfft = True
-    num_epochs = 30
+    cutoff_mfcc = 150
+    use_nfft = False
+    num_epochs = 100
     is_training = True
-    learning_rate = 0.001
+    learning_rate = 0.01
     dropout_prob = 0.5
 
 
@@ -222,7 +231,7 @@ def main():
                        isTraining=is_training,batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
                        cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,bottleneck=bottleneck,num_filters=num_filters,kernel_size = kernel_size
                        ,conv_stride = conv_stride,first_pool_stride = first_pool_stride,first_pool_size=first_pool_size,block_sizes = block_sizes,final_size = final_size,
-                       resnet_version = resnet_version,data_format=data_format)
+                       resnet_versionq = resnet_version,data_format=data_format)
 
 
 if __name__ == '__main__':

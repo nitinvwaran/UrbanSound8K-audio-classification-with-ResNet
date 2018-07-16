@@ -66,6 +66,11 @@ class AudioEventDetectionResnet(object):
             train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
             valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
+
+            train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+            valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
+
+
             if (os.path.exists(train_tensorboard_dir)):
                 shutil.rmtree(train_tensorboard_dir)
             os.mkdir(train_tensorboard_dir)
@@ -76,6 +81,10 @@ class AudioEventDetectionResnet(object):
 
             train_writer = tf.summary.FileWriter(train_tensorboard_dir, sess.graph)
             valid_writer = tf.summary.FileWriter(valid_tensorboard_dir)
+
+            print ('Number Train Examples:' + str(n_train))
+            print('Number Valid Examples:' + str(n_valid))
+            print ('Batch Size:' + str(batch_size))
 
 
             for i in range(1, epochs + 1):
@@ -96,12 +105,10 @@ class AudioEventDetectionResnet(object):
                         train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
                             j) + '.npy'),
 
-                    print ('Shapes of inputs and labels')
-                    print (npInputs.shape)
-                    print (npLabels[0].shape)
+                    #print ('Shapes of inputs and labels')
+                    #print (npInputs.shape)
+                    #print (npLabels[0].shape)
                     #print (npLabels[0][:10])
-
-
 
                     _, xent_mean, conf_matrix = sess.run(
                         [
@@ -170,9 +177,9 @@ class AudioEventDetectionResnet(object):
                         validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
                             v) + '.npy')
 
-                    print (npValInputs.shape)
-                    print (npValLabels.shape)
-                    print (npValLabels[:,10])
+                    #print (npValInputs.shape)
+                    #print (npValLabels.shape)
+                    #print (npValLabels[:10])
 
                     _, conf_matrix = sess.run(
                         [evaluation_step, confusion_matrix],
