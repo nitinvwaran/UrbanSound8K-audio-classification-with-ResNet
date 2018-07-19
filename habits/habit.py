@@ -154,8 +154,8 @@ def main():
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256
-    regenerate_training_inputs = True
-    regenerate_test_inputs = True
+    regenerate_training_inputs = False
+    regenerate_test_inputs = False
     cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True
@@ -213,7 +213,7 @@ def main():
                        learning_rate=learning_rate,dropoutprob=dropout_prob,ncep=number_cepstrums,nfft=nfft_value,label_count=num_labels,
                        batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
                        cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,
-                       data_format=data_format)
+                       data_format=data_format,train_tensorboard_dir=train_tensorboard_dir,valid_tensorboard_dir=valid_tensorboard_dir)
 
 
 if __name__ == '__main__':
