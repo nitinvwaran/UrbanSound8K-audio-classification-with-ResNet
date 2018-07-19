@@ -129,7 +129,7 @@ def run_validations(label_meta_file_path,do_scratch_training, train_directory, v
 
 def main():
 
-    batch_size = 100
+    batch_size = 250
     '''
     train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train/'
     validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
@@ -145,14 +145,18 @@ def main():
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
 
+    #train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
+    #valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
+    train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+    valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
 
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256
-    regenerate_training_inputs = False
-    regenerate_test_inputs = False
-    cutoff_spectogram = 100
+    regenerate_training_inputs = True
+    regenerate_test_inputs = True
+    cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True
     num_epochs = 100
@@ -160,22 +164,9 @@ def main():
     learning_rate = 0.01
     dropout_prob = 0.5
 
-
     # ResNet configurations
-    resnet_size = 18
-    bottleneck = False
-    num_classes = 10
-    num_filters = 64
-    kernel_size = 7
-    conv_stride = 2
-    first_pool_size = 3
-    first_pool_stride = 2
-    block_sizes = [2,2,2,2] # for resnet of 18 layers
-    block_strides = [1,2,2,2] # General for all block sizes
-    final_size = 512 # no bottleneck
-    resnet_version = 2
     data_format = 'channels_last'
-    dtype = tf.float32
+
 
     aed = AudioEventDetectionResnet()
 
@@ -214,26 +205,15 @@ def main():
         print ('Params are; train folder: ' + str(train_out_folder) + ' valid folder: ' + str(valid_out_folder) + ' number train files: ' + str(train_count) + ' number validation files:  ' + str(valid_count))
         print ('Number of Labels:' + str(num_labels))
 
-        #nfft = int(conf_object.nfft / 2 + 1)
-
-        #if (conf_object.use_nfft):
-        #    max_len = conf_object.cutoff_spectogram
-        #else:
-        #    max_len = conf_object.cutoff_mfcc
-
-        # Base  checkpoint directory which will always store only 1 model from scratch
-        # TODO: create freeze graph version of the scratch model
-
         if (os.path.exists(checkpoint_base_dir)):
             shutil.rmtree(checkpoint_base_dir)
         os.makedirs(checkpoint_base_dir)
 
         aed.base_train(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count,
                        learning_rate=learning_rate,dropoutprob=dropout_prob,ncep=number_cepstrums,nfft=nfft_value,label_count=num_labels,
-                       isTraining=is_training,batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
-                       cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,bottleneck=bottleneck,num_filters=num_filters,kernel_size = kernel_size
-                       ,conv_stride = conv_stride,first_pool_stride = first_pool_stride,first_pool_size=first_pool_size,block_sizes = block_sizes,final_size = final_size,
-                       resnet_version = resnet_version,data_format=data_format)
+                       batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
+                       cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,
+                       data_format=data_format)
 
 
 if __name__ == '__main__':

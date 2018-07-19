@@ -1,11 +1,6 @@
 import tensorflow as tf
 import os, shutil
 import numpy as np
-from resnet.resnet_model import _building_block_v1, _building_block_v2, _bottleneck_block_v1, _bottleneck_block_v2, \
-    batch_norm, \
-    conv2d_fixed_padding, block_layer
-slim = tf.contrib.slim
-
 
 class ModelHelper():
 
@@ -46,19 +41,18 @@ class AudioEventDetectionResnet(object):
                 ground_truth_input, predicted_indices, num_classes= num_labels, name = "confusion_matrix")
             evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="eval_step")
 
-        return ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean
+        return ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean, loss
 
 
-    def base_train(self, train_folder, validate_folder, n_train, n_valid, learning_rate, dropoutprob, ncep, nfft, label_count, isTraining, batch_size,
-                   epochs, chkpoint_dir, use_nfft, cutoff_spectogram, cutoff_mfcc,bottleneck, num_filters, kernel_size,conv_stride,
-                   first_pool_stride,first_pool_size,block_sizes,final_size,resnet_version,data_format):
+    def base_train(self, train_folder, validate_folder, n_train, n_valid, learning_rate, dropoutprob, ncep, nfft, label_count, batch_size,
+                   epochs, chkpoint_dir, use_nfft, cutoff_spectogram, cutoff_mfcc,data_format, train_tensorboard_dir, valid_tensorboard_dir):
 
         with tf.Graph().as_default() as grap:
-            logits, fingerprint_input, dropout_prob ,is_training \
+            logits, fingerprint_input,is_training \
                 = self.build_graph(use_nfft = use_nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,nfft=nfft,
                                    ncep=ncep,num_labels=label_count,data_format=data_format)
 
-            ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean \
+            ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean,loss \
                 = self.build_loss_optimizer(logits,label_count)
 
         with tf.Session(graph=grap) as sess:
@@ -66,14 +60,6 @@ class AudioEventDetectionResnet(object):
             saver = tf.train.Saver()
             init = tf.global_variables_initializer()
             sess.run(init)
-
-            train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
-            valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
-
-
-            train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
-            valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
-
 
             if (os.path.exists(train_tensorboard_dir)):
                 shutil.rmtree(train_tensorboard_dir)
@@ -90,17 +76,19 @@ class AudioEventDetectionResnet(object):
             print('Number Valid Examples:' + str(n_valid))
             print ('Batch Size:' + str(batch_size))
 
+            xent_counter = 0
 
             for i in range(1, epochs + 1):
-                total_conf_matrix = None
 
-                xent_summary = 0
+                total_conf_matrix = None
 
                 print('Epoch is: ' + str(i))
                 j = batch_size
+
                 '''''''''''''''''''''''''''''
                    'Full batch gradient descent'
                    '''''''''''''''''''''''''''''
+
                 while (j <= n_train):
                     npInputs = np.load(
                         train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(
@@ -114,20 +102,18 @@ class AudioEventDetectionResnet(object):
                     #print (npLabels.shape)
                     #print (npLabels[0][:10])
 
-                    _, xent_mean, conf_matrix = sess.run(
+                    _, l, conf_matrix = sess.run(
                         [
-                            train_step, cross_entropy_mean, confusion_matrix,
+                            train_step, loss, confusion_matrix,
 
                         ],
                         feed_dict={
                             fingerprint_input: npInputs,
                             ground_truth_input: npLabels,
                             learning_rate_input: learning_rate,
-                            dropout_prob: dropoutprob,
                             is_training: True
                         })
 
-                    xent_summary += np.sum(xent_mean)
 
                     if total_conf_matrix is None:
                         total_conf_matrix = conf_matrix
@@ -135,8 +121,9 @@ class AudioEventDetectionResnet(object):
                         total_conf_matrix += conf_matrix
 
                     xent_train_summary = tf.Summary(
-                        value=[tf.Summary.Value(tag="cross_entropy_sum", simple_value=np.sum(xent_mean))])
-                    train_writer.add_summary(xent_train_summary,j)
+                        value=[tf.Summary.Value(tag="cross_entropy_sum", simple_value=l)])
+                    xent_counter += 1
+                    train_writer.add_summary(xent_train_summary,xent_counter)
 
                     if (j == n_train):
                         break
@@ -152,12 +139,9 @@ class AudioEventDetectionResnet(object):
                 all_pos = np.sum(total_conf_matrix)
                 print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
 
-                loss_train_summary = tf.Summary(
-                    value=[tf.Summary.Value(tag="loss_train_summary", simple_value=xent_summary / (n_train))])
                 acc_train_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_train_summary", simple_value=float(true_pos / all_pos))])
 
-                train_writer.add_summary(loss_train_summary, i)
                 train_writer.add_summary(acc_train_summary, i)
 
                 # Save after every 10 epochs
@@ -175,7 +159,6 @@ class AudioEventDetectionResnet(object):
 
                     npValInputs = np.load(
                         validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
-                    #npValInputs = np.reshape(npValInputs, [-1, max_len * input_size])
 
                     npValLabels = np.load(
                         validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
@@ -190,7 +173,6 @@ class AudioEventDetectionResnet(object):
                         feed_dict={
                             fingerprint_input: npValInputs,
                             ground_truth_input: npValLabels,
-                            dropout_prob: 1.0,
                             is_training: False
                         })
 
@@ -344,12 +326,9 @@ class AudioEventDetectionResnet(object):
         print('Input Frequency Size:' + str(input_frequency_size))
 
         # Only declared as expected by the base class
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
         fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, input_time_size, input_frequency_size],
                                            name="fingerprint_input")
         is_training = tf.placeholder(dtype=tf.bool,name="is_training")
-
-        #TODO: Add 4th dimension to the input
         fingerprint_input_4D = tf.expand_dims(fingerprint_input,axis=3,name="fngerprint_4D")
         print (fingerprint_input_4D)
 
@@ -398,98 +377,7 @@ class AudioEventDetectionResnet(object):
             x = tf.reduce_mean(input_tensor=x,axis=mean_axes,name="reduced_tensor")
             x = tf.layers.dense(inputs=x,units=num_labels,use_bias=True)
 
-        return x, fingerprint_input,dropout_prob, is_training
-
-
-
-
-
-    '''
-    def build_graph(self, ncep, nfft, cutoff_spectogram, cutoff_mfcc, use_nfft,  is_training, bottleneck, num_classes, num_filters,
-                    kernel_size, conv_stride, first_pool_stride, first_pool_size, block_sizes, final_size, resnet_version, data_format):
-
-
-        
-        #print ('Resnet parameters:')
-        #print ('Resnet Version:' + str(resnet_version))
-        ##print ('Is Training:' + str(is_training))
-        #print('Bottleneck:' + str(bottleneck))
-        #print('Num Classes:' + str(num_classes))
-        #print('Num Filters:' + str(num_filters))
-        #print('Kernel Size:' + str(kernel_size))
-        #print('Conv Stride:' + str(conv_stride))
-        #print('First Pool Stride:' + str(first_pool_stride))
-        #print('First Pool Size:' + str(first_pool_size))
-        #print('Block Sizes:' + str(block_sizes))
-        #print('Final Size:' + str(final_size))
-        #print('Resnet Version:' + str(resnet_version))
-        #print('Data Format:' + str(data_format))
-        
-
-        if (resnet_version == 1 ):
-            block_fn = _building_block_v1
-        else:
-            block_fn = _building_block_v2
-
-        if (use_nfft):
-            input_time_size = cutoff_spectogram
-            input_frequency_size = (nfft / 2) + 1
-        else:
-            input_time_size = cutoff_mfcc
-            input_frequency_size = ncep
-
-
-        print ('Input Time Size:' + str(input_time_size))
-        print ('Input Frequency Size:' + str(input_frequency_size))
-
-        # Only declared as expected by the base class
-        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-
-        with tf.variable_scope('resnet_graph_layer', reuse=tf.AUTO_REUSE):
-
-            fingerprint_input = tf.placeholder(dtype=tf.float32, shape=[None, input_time_size, input_frequency_size],
-                                               name="fingerprint_input")
-
-            # Added 4th dimension for number of channels
-            inputs = tf.expand_dims(fingerprint_input,3)
-
-            print (inputs)
-
-
-            inputs = conv2d_fixed_padding(inputs = inputs, filters = num_filters,kernel_size = kernel_size,strides = conv_stride,
-                                          data_format = data_format)
-            inputs = tf.identity(inputs,name='resnet_initial_conv')
-
-            if resnet_version == 1: # resnet version 1
-                inputs = batch_norm(inputs = inputs,training = is_training,data_format = data_format)
-                inputs = tf.nn.relu(inputs)
-
-            if first_pool_size:
-                inputs = tf.layers.max_pooling2d(inputs = inputs, pool_size = first_pool_size, strides = first_pool_stride,
-                                                  padding = 'SAME', data_format = data_format)
-
-            for i, num_blocks in enumerate(block_sizes):
-                num_filters = num_filters * (2**i)
-                inputs = block_layer(inputs = inputs,filters = num_filters, bottleneck= bottleneck,blocks=num_blocks,strides=conv_stride,
-                                     block_fn =  block_fn,training= is_training,name='block_layer_{}'.format(i + 1),data_format =  data_format)
-
-            if resnet_version == 2:
-                inputs = batch_norm(inputs=inputs,training = is_training,data_format = data_format)
-                inputs = tf.nn.relu(inputs)
-
-
-            axes = [2,3] if data_format == 'channels_first' else [1,2]
-            inputs = tf.reduce_mean(inputs, axes,keepdims=True)
-            inputs = tf.identity(inputs,name='final_reduce_mean')
-
-            inputs = tf.reshape(inputs, [-1, final_size])
-            inputs = tf.layers.dense(inputs=inputs, units= num_classes)
-            logits = tf.identity(inputs, 'final_dense')
-
-            #softmax = tf.nn.softmax(logits, name="softmax_op")
-
-            return logits, fingerprint_input, dropout_prob
-            '''
+        return x, fingerprint_input, is_training
 
 
 
