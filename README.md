@@ -1,6 +1,14 @@
 # UrbanSound8K Audio Classification with ResNet-18
 
-This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. 
+This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. <br />
+
+**Training Accuracy: 100%!**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
+
+**Validation Accuracy: 77.26%**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br />
+
+**Test Accuracy: TBD** <br />
 
 **UrbanSound 8K Dataset** <br />
 The UrbanSound8K dataset information can be found here: https://urbansounddataset.weebly.com/urbansound8k.html <br />
