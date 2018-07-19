@@ -21,8 +21,7 @@ The following Data pre-processing steps were applied:
 2. Spectogram was extracted from the audio signal, and a Mel Filterbank was applied to the raw spectogram (using the librosa package).
    The number of Mel Filterbanks applied is 128.
 3. Log of the Mel Filterbanks was taken, after adding a small offset (1e-10)
-4. The number of frames is extracted from each .wav file. Any frames after the 75th frame from the .wav file are discarded. If the .wav     
-   file has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
+4. The number of frames is extracted from each .wav file. Any frames after the 75th frame from the .wav file are discarded. If the .wav file      has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
 5. Batch-size of 250 was selected, to give the inputs to the model as [250,75,128] ([batch_size, frame_length, number_mel_filterbanks_frequecies]
 6. Data is split into train-dev-test split of roughly 60-20-20
 <br />
