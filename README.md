@@ -15,7 +15,25 @@ Inspired by work from Google Research for Audio Classification ('CNN Architectur
 The original ResNet building block is used (Convolution -> Batch Normalization -> ReLU -> Convolution -> Batch Normalization -> Shortcut Addition -> ReLU), as can be seen modeled in the below diagram <br /> (Source: Kaiming He et. al, 'Identity Mappings in Deep Residual Networks') <br />
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/original_resnet_block.PNG)
 
+**Data Pre-Processing**
+The following Data pre-processing steps were applied:
+1. All .wav files were downsampled to 16KHz with single (Mono) channel
+2. Spectogram was extracted from the audio signal, and a Mel Filterbank was applied to the raw spectogram (using the librosa package).
+   The number of Mel Filterbanks applied is 128.
+3. Log of the Mel Filterbanks was taken, after adding a small offset (1e-10)
+4. The number of frames is extracted from each .wav file is. Any frames after the 75th frame from the .wav file are discarded. If the .wav     
+   file has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
+5. Batch-size of 250 was selected, to give the inputs to the model as [250,75,128] ([batch_size, frame_length, number_mel_filterbanks_frequecies]
+6. Data is split into train-dev-test split of roughly 60-20-20
+<br />
 
+**Model, Optimizer, and Loss details**
+1. Resnet-18 Model is used with ResNet v1 block, with the final layer being a dense layer for 10 classes.
+2. Adam Optimizer is used with initial learning rate of 0.01.
+3. Categorical Cross-Entropy Loss is used with mean reduction.
+4. Full-batch-size is used for training and gradient descent, given the small dataset size. 
+5. Model is run through 100 epochs.
+<br />
 
 
 
