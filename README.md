@@ -12,8 +12,7 @@ The ResNet-18 architecture is the residual network architecture with 18 layers. 
 **ResNet-18 on UrbanSound8K** <br />
 Inspired by work from Google Research for Audio Classification ('CNN Architectures for Large Scale Audio Classification': https://ai.google/research/pubs/pub45611), this github project was born with the idea to use Residual Networks for Audio Classification of Environmental Sound data such as the UrbanSound8K. The ResNet-18 layer was selected, with the aim to create a smaller model that could be optimized and deployed for smaller devices such as Mobile Phone and Raspberry Pi. 
 
-The original ResNet building block is used (Convolution -> Batch Normalization -> ReLU -> Convolution -> Batch Normalization -> Shortcut Addition -> ReLU), as can be seen modeled in the below diagram:
-
+The original ResNet building block is used (Convolution -> Batch Normalization -> ReLU -> Convolution -> Batch Normalization -> Shortcut Addition -> ReLU), as can be seen modeled in the below diagram (Source: Kaiming He et. al, 'Identity Mappings in Deep Residual Networks')
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/original_resnet_block.PNG)
 
 
