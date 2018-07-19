@@ -61,7 +61,7 @@ The following Data pre-processing steps were applied:
 
 
 
-**Acknowledgements**
+**Acknowledgements** <br />
 The tensorflow building blocks for the ResNet-18 architecture were adapted from the following github account: https://github.com/dalgu90/resnet-18-tensorflow. The adaptation is a simpler version of the original residual network building blocks from the github account.
 
 
