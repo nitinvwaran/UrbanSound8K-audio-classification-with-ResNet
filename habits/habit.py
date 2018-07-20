@@ -3,7 +3,7 @@ import shutil
 from habits.inputs_2 import CommonHelpers
 from habits.inputs_2 import InputRaw
 from habits.model import AudioEventDetectionResnet
-import tensorflow as tf
+
 
 def create_numpy_train_batches(train_directory,num_labels,validate_directory,regenerate_training_inputs,label_file,batch_size,
                                ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
@@ -154,8 +154,8 @@ def main():
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256
-    regenerate_training_inputs = False
-    regenerate_test_inputs = False
+    regenerate_training_inputs = True
+    regenerate_test_inputs = True
     cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True
