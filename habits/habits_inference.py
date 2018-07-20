@@ -1,99 +1,102 @@
 import os
 import numpy as np
-import glob
-from habits.inputs_2 import CommonHelpers as common_helpers
-from habits.inputs_2 import InputRaw as input_raw
-from habits.habits_configuration import Configuration
-from habits.model import AudioEventDetection as aed # Some of these methods should get its own common class
+from habits.model import AudioEventDetectionResnet as aed
+import pandas as pd
+import tensorflow as tf
 
 
-def invoke_inference(conf_object):
+def invoke_inference(test_batch_directory,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,batch_size,checkpoint_dir,label_count,data_format="channels_last"):
 
-    os.chdir(conf_object.test_directory)
-    file_name = ''
-    for file in glob.glob('*.wav'):
+    test_count = 0
 
-        file_name = file
-        mfcc,spectogram = input_raw.prepare_mfcc_spectogram(file_dir = conf_object.test_directory,file_name = file, ncep=conf_object.ncep,nfft=conf_object.nfft
-                                                  ,cutoff_mfcc=conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram
-                                                  )
-        if (conf_object.use_nfft):
+    # Read the count from the file
+    if (os.path.exists(test_batch_directory)):
+        with open(test_batch_directory + 'test_count.txt', 'r') as rf:
+            for line in rf.readlines():
+                test_count = int(line)
 
-            nparr1 = np.expand_dims(spectogram,axis=0)
+    os.chdir(test_batch_directory)
+    print('The Test Directory is:' + str(test_batch_directory))
 
-        else:
-            nparr1 = np.expand_dims(mfcc, axis=0)
+    with tf.Graph().as_default() as grap:
+        logits, fingerprint_input, is_training = aed.build_graph(use_nfft = use_nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc = cutoff_mfcc,nfft = nfft,ncep = ncep,num_labels=label_count,data_format=data_format)
 
-        nparr1 = np.reshape(nparr1, [-1, nparr1.shape[1] * nparr1.shape[2]])
+    with tf.Session(graph=grap) as sess:
 
-        print ('Shape of input matrix:' + str(nparr1.shape))
+        checkpoint_file_path = checkpoint_dir + 'urbansound8k_with_resnet.ckpt'
+
+        print('Checkpoint File is:' + checkpoint_file_path)
+        print('Loading Checkpoint File Path')
+
+        saver = tf.train.Saver()
+        saver.restore(sess, checkpoint_file_path)
+
+        j = batch_size
+
+        with open (test_batch_directory + 'ytest.txt','w') as predfile:
+
+            predfile.write('Actual,Prediction' + '\n')
+
+            while (j <= test_count):
+
+                print ('The batch is:' + str(j))
+
+                inputs = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(j) + '.npy')
+                labels = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(j) + '.npy')
+
+                predictions = sess.run(logits,
+                                       feed_dict={
+                                           fingerprint_input: inputs,
+                                           is_training: False
+                })
+
+                soft = tf.nn.softmax(predictions,name="softmax_preds")
+
+                pred_indexes = tf.argmax(soft,axis=1).eval(session=sess)
+
+                print ('Shapes of predictions and labels:' + str(labels.shape) + ' ' + str(len(pred_indexes)))
+                output = np.vstack((labels,pred_indexes))
+                t_out = np.asarray(np.transpose(output))
+
+                print ('Sample np array:' + t_out[:100])
+
+                for x in range(0,t_out.shape[0]):
+                    predfile.write(t_out[x][0] + t_out[x][1] + '\n')
 
 
-    num_labels, label_dict = common_helpers.get_labels_and_count(label_file=conf_object.label_meta_file_path)
-    checkpoint_file_path = conf_object.checkpoint_dir + 'habits/' + 'transfer_model_label_count_' + str(num_labels) + '.ckpt'
+def accuracy(y_file):
 
-    # What happens if base model is used?
-    #checkpoint_file_path = conf_object.checkpoint_dir + 'base_dir/' + 'base_model_labels_2.ckpt-90'
-    #num_labels = 2
+    yfile = pd.read_csv(y_file)
+    yfileActual = yfile.loc[:,'Actual']
+    yfilePred = yfile.loc[:,'Prediction']
 
-    print ('Checkpoint File is:' + checkpoint_file_path)
-    print ('File to Infer:' + file_name)
+    arraycheck = np.equal(yfileActual, yfilePred)
+    total_pred = np.sum(arraycheck)
 
-    # TODO: common helper class for inference among various model classes
-    if conf_object.use_graph:
-        print ('Inference with graph')
-        result = aed.inference_frozen(nparr=nparr1,frozen_graph=conf_object + 'habits_frozen.pb') # TODO: configure once frozen graph creation automated
-    else:
-        print ('Inference without graph')
-        result = aed.inference(ncep=conf_object.ncep, nfft=conf_object.nfft, cutoff_mfcc = conf_object.cutoff_mfcc,cutoff_spectogram=conf_object.cutoff_spectogram,label_count=num_labels,
-                           isTraining=False,nparr=nparr1,checkpoint_file_path=checkpoint_file_path,use_nfft=conf_object.use_nfft
-                           )
+    print('The test accuracy is:' + str(float(total_pred / yfile.shape[0])))
 
-    return np.argmax(result[0], axis=1)[0]
+
+
+
 
 
 def main():
 
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    ' # This code block to go in console call version '
-    ' # If more config to add, add them to the configuration class, then the command line parser below, then here. '
-
-    'conf_object = Configuration(train_directory=FLAGS.train_directory,validate_directory=FLAGS.validate_directory,test_directory=FLAGS.test_directory,train_bottleneck_dir=FLAGS.train_bottleneck_dir,'
-    '                   validate_bottleneck_dir=FLAGS.validate_bottleneck_dir,test_bottleneck_dir = FLAGS.test_bottleneck_dir,'
-    '                   checkpoint_dir=FLAGS.checkpoint_base_dir,number_cepstrums=FLAGS.number_cepstrums,nfft_value=FLAGS.nfft_value,label_meta_file_path=FLAGS.label_meta_file_path,'
-    '                   do_scratch_training=FLAGS.do_scratch_training,do_transfer_training=FLAGS.do_transfer_training, cutoff_spectogram = FLAGS.cutoff_spectogram,cutoff_mfcc=FLAGS.cutoff_mfcc,'
-    '                   regenerate_training_inputs =FLAGS.regenerate_training_inputs,regenerate_test_inputs=FLAGS.regenerate_test_inputs,batch_size=FLAGS.batch_size,use_nfft = FLAGS.use_nfft'
-    '                   ,num_epochs = FLAGS.num_epochs,learning_rate = FLAGS.learning_rate,dropout_prob = FLAGS.dropout_prob)'
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-    batch_size = 1  # Could change for batch inference
-    test_directory = '/home/nitin/Desktop/tensorflow_speech_dataset/predict/'
+    batch_size = 250  # Could change for batch inference
+    test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/batch_label_count_10/'
     checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
     label_meta_file_path = '/home/nitin/Desktop/tensorflow_speech_dataset/labels_meta/labels_meta.txt'
-    number_cepstrums = 13
-    nfft_value = 512  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
-    cutoff_spectogram = 300
-    cutoff_mfcc = 99
-    use_nfft = False
-    use_graph = False
-    train_directory = ''
-    validate_directory = ''
-    train_bottleneck_dir = ''
-    validate_bottleneck_dir = ''
-    test_bottleneck_dir = ''
+    number_cepstrums = 26
+    nfft_value = 256  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
+    cutoff_spectogram = 75
+    cutoff_mfcc = 150
+    use_nfft = True
 
-    conf_object = Configuration(test_directory=test_directory,
-                                checkpoint_dir=checkpoint_base_dir, number_cepstrums=number_cepstrums,
-                                nfft_value=nfft_value, label_meta_file_path=label_meta_file_path,
-                                cutoff_spectogram=cutoff_spectogram, cutoff_mfcc=cutoff_mfcc,
-                                batch_size=batch_size, use_nfft=use_nfft, use_graph=use_graph,train_directory=train_directory,
-                                validate_directory=validate_directory,train_bottleneck_dir=train_bottleneck_dir,validate_bottleneck_dir=validate_bottleneck_dir,
-                                test_bottleneck_dir=test_bottleneck_dir
-                                )
+    invoke_inference(test_batch_directory=test_directory,ncep=number_cepstrums,nfft=nfft_value,cutoff_mfcc=cutoff_mfcc,
+                              cutoff_spectogram=cutoff_spectogram,use_nfft=use_nfft,batch_size=batch_size,checkpoint_dir=checkpoint_base_dir,
+                              label_count=10)
 
-    result = invoke_inference(conf_object)
-
-    print ('The Label is:' + str(result))
+    accuracy(test_directory + 'ytest.txt')
 
 
 if __name__ == '__main__':

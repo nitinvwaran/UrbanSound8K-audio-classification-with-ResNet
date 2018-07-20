@@ -44,7 +44,7 @@ class AudioEventDetectionResnet(object):
         return ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean, loss
 
 
-    def base_train(self, train_folder, validate_folder, n_train, n_valid, learning_rate, dropoutprob, ncep, nfft, label_count, batch_size,
+    def base_train(self, train_folder, validate_folder, n_train, n_valid, learning_rate, ncep, nfft, label_count, batch_size,
                    epochs, chkpoint_dir, use_nfft, cutoff_spectogram, cutoff_mfcc,data_format, train_tensorboard_dir, valid_tensorboard_dir):
 
         with tf.Graph().as_default() as grap:
@@ -147,7 +147,7 @@ class AudioEventDetectionResnet(object):
                 # Save after every 10 epochs
                 if (i % 10 == 0):
                     print('Saving checkpoint for epoch:' + str(i))
-                    saver.save(sess=sess, save_path=chkpoint_dir + 'base_model_labels_' + str(label_count) + '.ckpt',
+                    saver.save(sess=sess, save_path=chkpoint_dir + 'urbansound8k_with_resnet.ckpt',
                                global_step=i)
 
                 v = batch_size
@@ -199,48 +199,6 @@ class AudioEventDetectionResnet(object):
                     value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
                 valid_writer.add_summary(acc_valid_summary, i)
 
-    def single_inference(self, nparr, ncep, nfft, cutoff_mfcc,cutoff_spectogram,num_labels,is_training,checkpoint_file_path,use_nfft):
-
-
-        with tf.Graph().as_default() as grap:
-            logits, fingerprint_input, dropout_prob = self.build_graph()
-
-        with tf.Session(graph=grap) as sess:
-            init = tf.global_variables_initializer()
-            sess.run(init)
-
-            print('Loading checkpoint file:' + checkpoint_file_path)
-            saver = tf.train.import_meta_graph(checkpoint_file_path + '.meta', clear_devices=True)
-            saver.restore(sess, checkpoint_file_path)
-
-            # uncomment below to debug variable names
-            # between the graph in memory and the graph from checkpoint file
-            # get_variable method should now reuse variables from memory scope
-            # Variable method was creating new copies and suffixing the numbers to new variables in memory
-
-            # var_name = [v.name for v in tf.global_variables()]
-
-            # print(var_name)
-            # reader = pyten.NewCheckpointReader(chk_path)
-            # var_to_shape_map = reader.get_variable_to_shape_map()
-            # print(var_to_shape_map)
-            # print(chk_path)
-
-            # saver.restore(sess,chk_path)
-            predictions = sess.run(
-                [
-                    logits
-                ],
-                feed_dict={
-                    fingerprint_input: nparr,
-                    dropout_prob: 1.0,
-                })
-
-            print('Predictions are:' + str(predictions))
-            print('Softmax predictions are:' + str(tf.nn.softmax(predictions)))
-            return predictions, tf.nn.softmax(predictions)
-
-
 
     # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py
     def conv_function(self,x,filter_size, out_channel, strides, pad='SAME',name='conv',data_format = 'channels_last'):
@@ -254,8 +212,6 @@ class AudioEventDetectionResnet(object):
             conv = tf.nn.conv2d(x,filter=kernel,strides=std,padding=pad,name="conv_tensor")
 
         return conv
-
-
 
     # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py
     def residual_block_resampled(self,x,filter_size, out_channel,strides,isTraining,data_format='channels_last', name="unit"):

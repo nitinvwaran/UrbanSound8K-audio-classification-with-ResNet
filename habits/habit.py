@@ -210,7 +210,7 @@ def main():
         os.makedirs(checkpoint_base_dir)
 
         aed.base_train(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count,
-                       learning_rate=learning_rate,dropoutprob=dropout_prob,ncep=number_cepstrums,nfft=nfft_value,label_count=num_labels,
+                       learning_rate=learning_rate,ncep=number_cepstrums,nfft=nfft_value,label_count=num_labels,
                        batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
                        cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,
                        data_format=data_format,train_tensorboard_dir=train_tensorboard_dir,valid_tensorboard_dir=valid_tensorboard_dir)
