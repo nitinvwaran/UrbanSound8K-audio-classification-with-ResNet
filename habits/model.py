@@ -1,5 +1,5 @@
 import tensorflow as tf
-import os, shutil
+import os, shutil, glob
 import numpy as np
 
 class ModelHelper():
@@ -56,6 +56,7 @@ class AudioEventDetectionResnet(object):
                 = self.build_loss_optimizer(logits,label_count)
 
         with tf.Session(graph=grap) as sess:
+
             # For checkpoints
             saver = tf.train.Saver()
             init = tf.global_variables_initializer()
@@ -72,8 +73,6 @@ class AudioEventDetectionResnet(object):
             train_writer = tf.summary.FileWriter(train_tensorboard_dir, sess.graph)
             valid_writer = tf.summary.FileWriter(valid_tensorboard_dir)
 
-            print ('Number Train Examples:' + str(n_train))
-            print('Number Valid Examples:' + str(n_valid))
             print ('Batch Size:' + str(batch_size))
 
             xent_counter = 0
@@ -81,68 +80,125 @@ class AudioEventDetectionResnet(object):
             for i in range(1, epochs + 1):
 
                 total_conf_matrix = None
+                valid_conf_matrix = None
+                total_loss = 0
 
                 print('Epoch is: ' + str(i))
-                j = batch_size
 
                 '''''''''''''''''''''''''''''
-                   'Full batch gradient descent'
-                   '''''''''''''''''''''''''''''
+                10-fold cross validation
+                '''''''''''''''''''''''''''''
+                for val_fold in (1,11):
 
-                while (j <= n_train):
-                    npInputs = np.load(
-                        train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(
-                            j) + '.npy')
-                    npLabels = np.load(
-                        train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
-                            j) + '.npy')
+                    fold_loss = 0
 
-                    #print ('Shapes of inputs and labels')
-                    #print (npInputs.shape)
-                    #print (npLabels.shape)
-                    #print (npLabels[0][:10])
+                    for fold in range(1,11):
 
-                    _, l, conf_matrix = sess.run(
-                        [
-                            train_step, loss, confusion_matrix,
+                        if (fold == val_fold):
+                            continue  #to validate nicely, with a smile
 
-                        ],
-                        feed_dict={
-                            fingerprint_input: npInputs,
-                            ground_truth_input: npLabels,
-                            learning_rate_input: learning_rate,
-                            is_training: True
-                        })
+                        train_inputs_dir = train_folder + 'fold' + str(fold) + '/batch/inputs/'
+                        train_labels_dir = train_folder + 'fold' + str(fold) + '/batch/labels/'
+
+                        os.chdir(train_inputs_dir)
+                        print ('Fold directory is:' + train_inputs_dir)
+
+                        for npy_file in glob.glob('*.npy'):
+
+                            npInputs = np.load(train_inputs_dir + npy_file)
+                            npLabels = np.load(train_labels_dir + npy_file)
+
+                            print ('Shapes of inputs and labels')
+                            print (npInputs.shape)
+                            print (npLabels.shape)
+                            print (npLabels[:10])
+
+                            _, l, conf_matrix = sess.run(
+                                [
+                                    train_step, loss, confusion_matrix,
+
+                                ],
+                                feed_dict={
+                                    fingerprint_input: npInputs,
+                                    ground_truth_input: npLabels,
+                                    learning_rate_input: learning_rate,
+                                    is_training: True
+                                })
 
 
-                    if total_conf_matrix is None:
-                        total_conf_matrix = conf_matrix
-                    else:
-                        total_conf_matrix += conf_matrix
+                            if total_conf_matrix is None:
+                                total_conf_matrix = conf_matrix
+                            else:
+                                total_conf_matrix += conf_matrix
 
-                    xent_train_summary = tf.Summary(
-                        value=[tf.Summary.Value(tag="cross_entropy_sum", simple_value=l)])
-                    xent_counter += 1
-                    train_writer.add_summary(xent_train_summary,xent_counter)
+                            total_loss += l
 
-                    if (j == n_train):
-                        break
+                            xent_counter += 1
 
-                    if (j + batch_size > n_train):
-                        j = n_train
-                    else:
-                        j = j + batch_size
+                            loss_fold_train_summary = tf.Summary(
+                                    value=[tf.Summary.Value(tag="loss_train_fold_summary", simple_value=l)])
 
-                'Training set reporting after every epoch'
-                print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
-                true_pos = np.sum(np.diag(total_conf_matrix))
-                all_pos = np.sum(total_conf_matrix)
+                            train_writer.add_summary(loss_fold_train_summary, xent_counter)
+
+
+                    valid_inputs_dir = train_folder + 'fold' + str(val_fold) + '/batch/inputs/'
+                    valid_labels_dir = train_folder + 'fold' + str(val_fold) + '/batch/labels/'
+
+                    os.chdir(valid_inputs_dir)
+                    print ('Validation fold is:' + valid_inputs_dir)
+
+                    for npy_file in glob.glob('*.npy'):
+
+                        npValInputs = np.load(valid_inputs_dir + npy_file)
+                        npValLabels = np.load(valid_labels_dir + npy_file)
+
+                        print ('Shapes of valid inputs and labels')
+                        print (npValInputs.shape)
+                        print (npValLabels.shape)
+                        print (npValLabels[:10])
+
+                        conf_matrix = sess.run(
+                             confusion_matrix,
+                            feed_dict={
+                                fingerprint_input: npValInputs,
+                                ground_truth_input: npValLabels,
+                                is_training: False
+                            })
+
+                        if (valid_conf_matrix is None):
+                            valid_conf_matrix = conf_matrix
+                        else:
+                            valid_conf_matrix += conf_matrix
+
+                'Outside the 10-fold'
+                'Training and validation set reporting after every epoch'
+                avg_conf_train_matrix = round(total_conf_matrix / 10)
+                print('Average Training Confusion Matrix:' + '\n' + str(avg_conf_train_matrix))
+                true_pos = np.sum(np.diag(avg_conf_train_matrix))
+                all_pos = np.sum(avg_conf_train_matrix)
                 print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
+
+                print ('Average training loss is:' + str(total_loss/10))
+
 
                 acc_train_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_train_summary", simple_value=float(true_pos / all_pos))])
-
                 train_writer.add_summary(acc_train_summary, i)
+
+                loss_train_summary = tf.Summary(
+                    value=[tf.Summary.Value(tag="acc_train_loss", simple_value=total_loss/10)])
+                train_writer.add_summary(loss_train_summary, i)
+
+                'Validation Set reporting after every epoch'
+                avg_conf_valid_matrix = round(valid_conf_matrix / 10)
+                print('Validation Confusion Matrix: ' + '\n' + str(avg_conf_valid_matrix))
+                true_pos = np.sum(np.diag(avg_conf_valid_matrix))
+                all_pos = np.sum(avg_conf_valid_matrix)
+                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+
+                acc_valid_summary = tf.Summary(
+                    value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
+                valid_writer.add_summary(acc_valid_summary, i)
 
                 # Save after every 10 epochs
                 if (i % 10 == 0):
@@ -150,54 +206,9 @@ class AudioEventDetectionResnet(object):
                     saver.save(sess=sess, save_path=chkpoint_dir + 'urbansound8k_with_resnet.ckpt',
                                global_step=i)
 
-                v = batch_size
-                valid_conf_matrix = None
-                if (batch_size > n_valid):
-                    v = n_valid
 
-                while (v <= n_valid):
 
-                    npValInputs = np.load(
-                        validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(v) + '.npy')
 
-                    npValLabels = np.load(
-                        validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
-                            v) + '.npy')
-
-                    #print (npValInputs.shape)
-                    #print (npValLabels.shape)
-                    #print (npValLabels[:10])
-
-                    _, conf_matrix = sess.run(
-                        [evaluation_step, confusion_matrix],
-                        feed_dict={
-                            fingerprint_input: npValInputs,
-                            ground_truth_input: npValLabels,
-                            is_training: False
-                        })
-
-                    if (valid_conf_matrix is None):
-                        valid_conf_matrix = conf_matrix
-                    else:
-                        valid_conf_matrix += conf_matrix
-
-                    if (v == n_valid):
-                        break
-
-                    if (v + batch_size > n_valid):
-                        v = n_valid
-                    else:
-                        v = v + batch_size
-
-                'Validation Set reporting after every epoch'
-                print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
-                true_pos = np.sum(np.diag(valid_conf_matrix))
-                all_pos = np.sum(valid_conf_matrix)
-                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-                acc_valid_summary = tf.Summary(
-                    value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
-                valid_writer.add_summary(acc_valid_summary, i)
 
 
     # Adapted from https://github.com/dalgu90/resnet-18-tensorflow/blob/master/resnet.py

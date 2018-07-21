@@ -3,153 +3,64 @@ import shutil
 from habits.inputs_2 import CommonHelpers
 from habits.inputs_2 import InputRaw
 from habits.model import AudioEventDetectionResnet
-import tensorflow as tf
 
-def create_numpy_train_batches(train_directory,num_labels,validate_directory,regenerate_training_inputs,label_file,batch_size,
-                               ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
+
+def create_numpy_train_batches(train_directory,regenerate_training_inputs,batch_size,
+                               ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft):
 
     input_raw = InputRaw()
+    lsFolds = ['fold1','fold2','fold3','fold4','fold5','fold6','fold7','fold8','fold9','fold10']
 
-    # Creating the inputs - either bottleneck, or numpy arrays from scratch
-    train_out_folder = train_directory + 'batch_label_count_' + str(num_labels) + '/'
+    total_count = 0
 
+    for item in lsFolds:
+        print ('The fold dir is:' + item)
 
-    valid_out_folder = validate_directory + 'batch_label_count_' + str(num_labels) + '/'
-
-    train_count = 0
-    valid_count = 0
-
-    if (os.path.exists(train_out_folder)):
-        with open(train_out_folder + 'train_count.txt', 'r') as rf:
-            for line in rf.readlines():
-                train_count = int(line)
-
-    if (os.path.exists(valid_out_folder)):
-        with open(valid_out_folder + 'valid_count.txt', 'r') as rf:
-            for line in rf.readlines():
-                valid_count = int(line)
+        foldDir = train_directory + item + '/'
 
 
-    if (regenerate_training_inputs):
+        if (regenerate_training_inputs):
 
-        # Generate numpy files for train and validate
-        # Existing numpy batches will be erased and replaced
-        try:
-
-            train_out_folder, train_count = input_raw.create_numpy_batches(file_dir = train_directory,label_count=num_labels,
-                                                                           label_file= label_file,batch_size = batch_size,ncep=ncep,nfft=nfft,
-                                                                           cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram
-                                                                           ,use_nfft = use_nfft,labels_meta=labels_meta)
-            with open(train_out_folder + 'train_count.txt', 'w') as wf:
+            train_batch_folder, train_count = input_raw.create_numpy_batches(file_dir = foldDir,
+                                                                            batch_size = batch_size,ncep=ncep,nfft=nfft,
+                                                                            cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram
+                                                                            ,use_nfft = use_nfft)
+            with open(train_batch_folder + 'train_count.txt', 'w') as wf:
                 wf.write(str(train_count) + '\n')
 
-            # Create validate batches
-            valid_out_folder, valid_count = input_raw.create_numpy_batches(file_dir = validate_directory,label_count=num_labels,
-                                                                           label_file= label_file,batch_size = batch_size,ncep=ncep,nfft=nfft,
-                                                                           cutoff_mfcc = cutoff_mfcc, cutoff_spectogram=cutoff_spectogram
-                                                                           ,use_nfft = use_nfft,labels_meta=labels_meta)
+            total_count += train_count
 
-            with open(valid_out_folder + 'valid_count.txt', 'w') as wf:
-                wf.write(str(valid_count) + '\n')
-
-        except Exception as e:
-            if (os.path.exists(train_out_folder)):
-                shutil.rmtree(train_out_folder)
-
-            if (os.path.exists(valid_out_folder)):
-                shutil.rmtree(valid_out_folder)
-
-            raise e
+        else:
+            print('Re-using the existing training and validation batches')
 
 
-    else:
-        print('Re-using the existing training and validation batches')
+    return total_count
 
-
-    return train_out_folder,valid_out_folder,train_count,valid_count
-
-
-def create_numpy_test_batches(test_directory,num_labels,regenerate_test_inputs,label_file,batch_size,
-                               ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
-
-    input_raw = InputRaw()
-
-    if (test_directory.strip() == ''):
-        print ('You must specify a test directory with wav files for testing, my son')
-        raise Exception('No Test Directory Specified!')
-
-
-    # Creating the inputs - either bottleneck, or numpy arrays from scratch
-    test_out_folder = test_directory + 'batch_label_count_' + str(num_labels) + '/'
-
-    test_count = 0
-    if (os.path.exists(test_out_folder)):
-        with open(test_out_folder + 'test_count.txt', 'r') as rf:
-            for line in rf.readlines():
-                test_count = int(line)
-
-        # Create test batches
-        # Existing numpy batches will be erased and replaced
-    if (regenerate_test_inputs):
-
-        try:
-            test_out_folder, test_count = input_raw.create_numpy_batches(file_dir = test_directory,label_count=num_labels
-                                                                         ,label_file=label_file,batch_size=batch_size,ncep=ncep,
-                                                                         nfft=nfft,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram,
-                                                                         use_nfft=use_nfft,labels_meta=labels_meta)
-            with open (test_out_folder + 'test_count.txt','w') as wf:
-                wf.write(str(test_count) + '\n')
-
-        except Exception as e:
-            if (os.path.exists(test_out_folder)):
-                shutil.rmtree(test_out_folder)
-
-            raise e
-
-    else:
-        print ('Not generating test batches, reusing where applicable')
-
-    return test_out_folder,test_count
-
-
-
-
-def run_validations(label_meta_file_path,do_scratch_training, train_directory, validate_directory):
-
-    if (label_meta_file_path.strip() == ''):
-        print('You must specify a label meta file')
-        raise Exception('You must specify a label meta file')
-    elif (do_scratch_training):
-        if(train_directory.strip() == ''):
-            print ('You must specify a training directory with wav files for scratch training')
-            raise Exception('You must specify a training directory with wav files for scratch training')
-        elif (validate_directory.strip() == ''):
-            print('You must specify a validation directory with wav files for scratch training')
-            raise Exception('You must specify a validation directory with wav files for scratch training')
 
 def main():
 
     batch_size = 250
-    '''
-    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train/'
-    validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
+
+    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/audio/'
+    #validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
     test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/'
     checkpoint_base_dir = '/home/nitin/Desktop/aws_habits/FMSG_Habits/checkpoints/base_dir/'
     label_meta_file_path = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
+
+
     '''
-
-
     train_directory = '/home/ubuntu/Desktop/urbansound_data/train/'
     validate_directory = '/home/ubuntu/Desktop/urbansound_data/valid/'
     test_directory = '/home/ubuntu/Desktop/urbansound_data/test/'
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
+    '''
 
-    #train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
-    #valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
+    train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
+    valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
-    train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
-    valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
+    #train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+    #valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
 
     do_scratch_training = True
     number_cepstrums = 26
@@ -167,11 +78,8 @@ def main():
     # ResNet configurations
     data_format = 'channels_last'
 
-
     aed = AudioEventDetectionResnet()
 
-    run_validations(label_meta_file_path=label_meta_file_path,do_scratch_training=do_scratch_training,train_directory=train_directory,
-                    validate_directory=validate_directory)
 
     # Read the labels meta file
     common_helpers = CommonHelpers()
@@ -186,30 +94,23 @@ def main():
 
         print ('Starting preparing batches:')
 
-        train_out_folder, valid_out_folder, train_count, valid_count = \
-            create_numpy_train_batches(train_directory=train_directory,num_labels=num_labels,validate_directory=validate_directory,
-                                       regenerate_training_inputs=regenerate_training_inputs,label_file=label_meta_file_path,batch_size=batch_size,
-                                       ncep=number_cepstrums,nfft=nfft_value,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram,use_nfft=use_nfft,
-                                       labels_meta=label_dict)
-        test_out_folder, test_count = create_numpy_test_batches(test_directory=test_directory,num_labels = num_labels,regenerate_test_inputs=regenerate_test_inputs,
-                                                                label_file=label_meta_file_path, batch_size=batch_size,
-                                                                ncep=number_cepstrums, nfft=nfft_value,
-                                                                cutoff_mfcc=cutoff_mfcc,
-                                                                cutoff_spectogram=cutoff_spectogram, use_nfft=use_nfft,
-                                                                labels_meta=label_dict
-                                                                )
+        total_count = \
+            create_numpy_train_batches(train_directory=train_directory,
+                                       regenerate_training_inputs=regenerate_training_inputs,batch_size=batch_size,
+                                       ncep=number_cepstrums,nfft=nfft_value,cutoff_mfcc=cutoff_mfcc,cutoff_spectogram=cutoff_spectogram,use_nfft=use_nfft
+                                       )
 
+        print ('Total count of files:' + str(total_count))
 
         # Start training
         print ('Starting scratch training')
-        print ('Params are; train folder: ' + str(train_out_folder) + ' valid folder: ' + str(valid_out_folder) + ' number train files: ' + str(train_count) + ' number validation files:  ' + str(valid_count))
         print ('Number of Labels:' + str(num_labels))
 
         if (os.path.exists(checkpoint_base_dir)):
             shutil.rmtree(checkpoint_base_dir)
         os.makedirs(checkpoint_base_dir)
 
-        aed.base_train(train_folder=train_out_folder,validate_folder=valid_out_folder,n_train = train_count,n_valid=valid_count,
+        aed.base_train(train_folder=train_directory,validate_folder='',n_train = total_count,n_valid=total_count,
                        learning_rate=learning_rate,ncep=number_cepstrums,nfft=nfft_value,label_count=num_labels,
                        batch_size=batch_size,epochs=num_epochs,chkpoint_dir=checkpoint_base_dir,use_nfft=use_nfft,
                        cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,

@@ -29,7 +29,7 @@ class CommonHelpers(object):
 
         return (num_labels, dict_labels)
 
-    def reset_folder_make_new(self,file_dir, label_count):
+    def reset_folder_make_new(self,file_dir):
 
         """
         @:type label_count: int
@@ -39,7 +39,7 @@ class CommonHelpers(object):
 
         """
 
-        version_out_dir = file_dir + 'batch_label_count_' + str(label_count) + '/'
+        version_out_dir = file_dir + 'batch/'
 
         # Make a new directory, if this is a new graph version, to store all the batches in there for the new graph version
         if (os.path.isdir(version_out_dir)):
@@ -49,15 +49,11 @@ class CommonHelpers(object):
 
         return version_out_dir
 
-    def stamp_label(self,num_labels, labels_meta, filename):
-        # Brands the file with one of x labels
-        # The filename must contain the string label name in lowercase
-        l = -1  # default, means key does not exist
-        for j in range(0, num_labels):
-            if (filename.__contains__(labels_meta[j])):
-                l = j  # Assign the label and break, overrides default
-                break
 
+
+    def stamp_label(self,filename):
+
+        l = int(filename.split('-')[1])
         return l
 
 class InputRaw(object):
@@ -105,21 +101,25 @@ class InputRaw(object):
 
         return log_mel_pad_spgm
 
-    def create_numpy_batches(self,file_dir,label_count,label_file,batch_size,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,labels_meta):
+    def create_numpy_batches(self,file_dir,batch_size,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft):
 
         common_helpers = CommonHelpers()
         os.chdir(file_dir)
+        version_out_dir = common_helpers.reset_folder_make_new(file_dir)
+
+        os.makedirs(version_out_dir + 'inputs/')
+        os.makedirs(version_out_dir + 'labels/')
+
         file_count = len([name for name in os.listdir('.') if os.path.isfile(name)])
         if (file_count == 0):
             print ('No files in the directory:' + file_dir + ' exiting now')
             raise Exception ('No files in the directory:' + file_dir)
 
+        file_count -= 1
+
         i = 0
         inputs = []
         labels = []
-
-        version_out_dir = common_helpers.reset_folder_make_new(file_dir, label_count)
-
 
         print ('Count of files in training directory' + file_dir + ' is: ' + str(file_count))
         print ('Preparing the numpy batches to the directory:' + version_out_dir)
@@ -139,7 +139,7 @@ class InputRaw(object):
 
             inputs.append(input_raw)
 
-            l = common_helpers.stamp_label(num_labels= label_count,labels_meta=labels_meta,filename=file)
+            l = common_helpers.stamp_label(filename=file)
             labels.append(l)
 
             i = i + 1
@@ -152,11 +152,10 @@ class InputRaw(object):
                 print (npInputs.shape)
                 print (npLabels.shape)
 
-
                 print ('Saving batch ' + str(i) + ' to the output dir ' + version_out_dir)
                 # Numpy batch dump the voice files in batches of batch_size
-                np.save(version_out_dir + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(i) + '.npy',npInputs)
-                np.save(version_out_dir + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(i) + '.npy', npLabels)
+                np.save(version_out_dir + 'inputs/models_numpy_batch' + '_' + str(i) + '.npy', npInputs)
+                np.save(version_out_dir + 'labels/models_numpy_batch' + '_' + str(i) + '.npy', npLabels)
                 inputs = []
                 labels = []
 
