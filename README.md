@@ -33,7 +33,7 @@ This is the best test accuracy reported using a standard train-dev-test split.
 <br/>
 
 
-**2. Training Accuracy: 100%!**
+**2. Training Accuracy: 100%**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
 
 **3. Validation Accuracy: 77.26%**
