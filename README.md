@@ -8,17 +8,14 @@ The creators of the dataset strongly recommend using the pre-prepared 10-folds t
 **APPROACH 1:** <br/>
 10-fold Cross Validation, using all data in each fold for training and validation. The average of the validation accuracy, training accuracy, and training loss across 10-folds is taken at the end of each epoch. The per-fold validation accuracy, training accuracy, and training loss are also reported. <br/>
 No test accuracy is reported as no test data is available.
-
-<br /> <br />
+<br />
 The **training accuracy** reaches 100% within 51 folds. <br />
 The **average training accuracy** reaches 100% within 5 epochs. <br />
 The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 
 **1. Validation-accuracy per-fold**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_valid_fold.PNG)
-
 <br/>
-<br />
 
 **2. Average Vaildation accuracy per epoch**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/avg_valid_accuracy.PNG)
@@ -26,11 +23,10 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 
 **APPROACH 2:** <br/>
 This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
-< br/>
 
 The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
 
-**1. Test Accuracy: 77.61%** <br />
+**1. Test Accuracy: 77.61%** <br/>
 This is the best test accuracy reported using a standard train-dev-test split. 
 <br/>
 
@@ -43,7 +39,6 @@ This is the best test accuracy reported using a standard train-dev-test split.
 
 **Training Loss Over Time** 
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/loss_resnet_urbansound8k.PNG) <br /> <br/>
-
 
 
 **GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
@@ -68,7 +63,7 @@ The following Data pre-processing steps were applied:
 2. Spectogram was extracted from the audio signal, and a Mel Filterbank was applied to the raw spectogram (using the librosa package).
    The number of Mel Filterbanks applied is 128.
 3. Log of the Mel Filterbanks was taken, after adding a small offset (1e-10)
-4. The number of frames is extracted from each .wav file. Any frames after the 75th frame from the .wav file are discarded. If the .wav file      has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
+4. The number of frames is extracted from each .wav file. Any frames after the 75th frame from the .wav file are discarded. If the .wav file has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
 5. Batch-size of 250 was selected, to give the inputs to the model as [250,75,128] ([batch_size, frame_length, number_mel_filterbanks_frequecies]
 
 <br />
@@ -78,24 +73,8 @@ The following Data pre-processing steps were applied:
 2. Adam Optimizer is used with initial learning rate of 0.01.
 3. Categorical Cross-Entropy Loss is used with mean reduction.
 4. Full-batch-size is used for training and gradient descent, given the small dataset size. 
-5. Model is run through 100 epochs.
+5. Model is run through 100 epochs in APPROACH 2.
 <br />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 **Acknowledgements** <br />
 The tensorflow building blocks for the ResNet-18 architecture were adapted from the following github account: https://github.com/dalgu90/resnet-18-tensorflow. The adaptation is a simpler version of the original residual network building blocks from the github account.
