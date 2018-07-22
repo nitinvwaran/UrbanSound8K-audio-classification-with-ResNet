@@ -2,8 +2,30 @@
 
 This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. <br />
 
+**UPDATE** <br/>
+The creators of the dataset strongly recommend using the pre-prepared 10-folds they made. Two approaches were hence used in this project and both are reported:
+<br/>
+APPROACH 1: <br/>
+10-fold Cross Validation, using all data in each fold for training and validation. The average of the validation accuracy, training accuracy, and training loss across 10-folds is taken at the end of each epoch. The per-fold validation accuracy, training accuracy, and training loss are also reported. <br/>
+No test accuracy is reported as no test data is available.
+
+<br /> <br />
+The **training accuracy** reaches 100% within 51 folds. <br />
+The **average training accuracy** reaches 100% within 5 epochs. <br />
+The **average validation accuracy** reaches 99.78% after 9 epochs <br />
+
+**Validation-accuracy per-fold**
+
+
+
+APPROACH 2: <br/>
+This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
+< br/>
+
+The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
+
 **Test Accuracy: 77.61%** <br />
-_________________________________
+
 
 **Training Accuracy: 100%!**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
@@ -35,7 +57,7 @@ The following Data pre-processing steps were applied:
 3. Log of the Mel Filterbanks was taken, after adding a small offset (1e-10)
 4. The number of frames is extracted from each .wav file. Any frames after the 75th frame from the .wav file are discarded. If the .wav file      has less than 75 frames, zero padding is applied. To generate the frames, the default settings from the librosa package were used.
 5. Batch-size of 250 was selected, to give the inputs to the model as [250,75,128] ([batch_size, frame_length, number_mel_filterbanks_frequecies]
-6. Data is split into train-dev-test split of roughly 60-20-20
+
 <br />
 
 **Model, Optimizer, and Loss details**
