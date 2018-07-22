@@ -79,18 +79,22 @@ class AudioEventDetectionResnet(object):
 
             for i in range(1, epochs + 1):
 
-                total_conf_matrix = None
-                valid_conf_matrix = None
-                total_loss = 0
+                avg_valid_accuracy = float(0)
+                avg_train_accuracy = float(0)
+                avg_train_loss = float(0)
 
                 print('Epoch is: ' + str(i))
 
                 '''''''''''''''''''''''''''''
                 10-fold cross validation
                 '''''''''''''''''''''''''''''
-                for val_fold in (1,11):
+                for val_fold in range(1,11):
 
-                    fold_loss = 0
+                    total_loss = 0
+                    total_conf_matrix = None
+                    valid_conf_matrix = None
+
+                    print( 'The validation fold is:' + str(val_fold))
 
                     for fold in range(1,11):
 
@@ -108,10 +112,10 @@ class AudioEventDetectionResnet(object):
                             npInputs = np.load(train_inputs_dir + npy_file)
                             npLabels = np.load(train_labels_dir + npy_file)
 
-                            print ('Shapes of inputs and labels')
-                            print (npInputs.shape)
-                            print (npLabels.shape)
-                            print (npLabels[:10])
+                            #print ('Shapes of inputs and labels')
+                            #print (npInputs.shape)
+                            #print (npLabels.shape)
+                            #print (npLabels[:10])
 
                             _, l, conf_matrix = sess.run(
                                 [
@@ -133,14 +137,6 @@ class AudioEventDetectionResnet(object):
 
                             total_loss += l
 
-                            xent_counter += 1
-
-                            loss_fold_train_summary = tf.Summary(
-                                    value=[tf.Summary.Value(tag="loss_train_fold_summary", simple_value=l)])
-
-                            train_writer.add_summary(loss_fold_train_summary, xent_counter)
-
-
                     valid_inputs_dir = train_folder + 'fold' + str(val_fold) + '/batch/inputs/'
                     valid_labels_dir = train_folder + 'fold' + str(val_fold) + '/batch/labels/'
 
@@ -152,12 +148,12 @@ class AudioEventDetectionResnet(object):
                         npValInputs = np.load(valid_inputs_dir + npy_file)
                         npValLabels = np.load(valid_labels_dir + npy_file)
 
-                        print ('Shapes of valid inputs and labels')
-                        print (npValInputs.shape)
-                        print (npValLabels.shape)
-                        print (npValLabels[:10])
+                        #print ('Shapes of valid inputs and labels')
+                        #print (npValInputs.shape)
+                        #print (npValLabels.shape)
+                        #print (npValLabels[:10])
 
-                        conf_matrix = sess.run(
+                        val_conf_matrix = sess.run(
                              confusion_matrix,
                             feed_dict={
                                 fingerprint_input: npValInputs,
@@ -166,49 +162,69 @@ class AudioEventDetectionResnet(object):
                             })
 
                         if (valid_conf_matrix is None):
-                            valid_conf_matrix = conf_matrix
+                            valid_conf_matrix = val_conf_matrix
                         else:
-                            valid_conf_matrix += conf_matrix
+                            valid_conf_matrix += val_conf_matrix
 
-                'Outside the 10-fold'
-                'Training and validation set reporting after every epoch'
-                avg_conf_train_matrix = round(total_conf_matrix / 10)
-                print('Average Training Confusion Matrix:' + '\n' + str(avg_conf_train_matrix))
-                true_pos = np.sum(np.diag(avg_conf_train_matrix))
-                all_pos = np.sum(avg_conf_train_matrix)
-                print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
+                    print('Training Confusion Matrix after validation fold:' + str(val_fold) + '\n' + str(total_conf_matrix))
+                    true_pos = np.sum(np.diag(total_conf_matrix))
+                    all_pos = np.sum(total_conf_matrix)
+                    print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
+                    print ('Total data points:' + str(all_pos))
 
-                print ('Average training loss is:' + str(total_loss/10))
+                    # Capture sum over all folds, to average out at end of the epoch
+                    avg_train_accuracy += float(true_pos/all_pos)
+                    avg_train_loss += total_loss
+
+                    print ('Training loss after fold:' + str(val_fold) + ': ' + str(total_loss))
+
+                    xent_counter += 1
+
+                    loss_train_summary = tf.Summary(
+                        value=[tf.Summary.Value(tag="acc_train_loss", simple_value=total_loss)])
+                    train_writer.add_summary(loss_train_summary, xent_counter)
+
+                    acc_train_fold_summary = tf.Summary(
+                        value=[tf.Summary.Value(tag="acc_train_fold_summary", simple_value=float(true_pos/all_pos))])
+                    train_writer.add_summary(acc_train_fold_summary, xent_counter)
+
+                    'Validation Set reporting after the fold'
+                    print('Validation Confusion Matrix after fold: ' + str(val_fold) + '\n' + str(valid_conf_matrix))
+                    true_pos = np.sum(np.diag(valid_conf_matrix))
+                    all_pos = np.sum(valid_conf_matrix)
+                    print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+                    print('Total data points:' + str(all_pos))
+
+                    avg_valid_accuracy += float(true_pos/all_pos)
+
+                    acc_valid_fold_summary = tf.Summary(
+                        value=[tf.Summary.Value(tag="acc_valid_fold_summary",
+                                                simple_value=float(true_pos / all_pos))])
+                    valid_writer.add_summary(acc_valid_fold_summary, xent_counter)
 
 
-                acc_train_summary = tf.Summary(
-                    value=[tf.Summary.Value(tag="acc_train_summary", simple_value=float(true_pos / all_pos))])
-                train_writer.add_summary(acc_train_summary, i)
 
-                loss_train_summary = tf.Summary(
-                    value=[tf.Summary.Value(tag="acc_train_loss", simple_value=total_loss/10)])
-                train_writer.add_summary(loss_train_summary, i)
-
-                'Validation Set reporting after every epoch'
-                avg_conf_valid_matrix = round(valid_conf_matrix / 10)
-                print('Validation Confusion Matrix: ' + '\n' + str(avg_conf_valid_matrix))
-                true_pos = np.sum(np.diag(avg_conf_valid_matrix))
-                all_pos = np.sum(avg_conf_valid_matrix)
-                print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
-
-                acc_valid_summary = tf.Summary(
-                    value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
-                valid_writer.add_summary(acc_valid_summary, i)
-
-                # Save after every 10 epochs
-                if (i % 10 == 0):
+                # Save after every epoch
+                if (i % 1 == 0):
                     print('Saving checkpoint for epoch:' + str(i))
                     saver.save(sess=sess, save_path=chkpoint_dir + 'urbansound8k_with_resnet.ckpt',
                                global_step=i)
 
+                acc_train_summary = tf.Summary(
+                    value=[tf.Summary.Value(tag="acc_train_summary", simple_value=avg_train_accuracy / 10)])
+                train_writer.add_summary(acc_train_summary, i)
 
+                acc_valid_summary = tf.Summary(
+                    value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=avg_valid_accuracy / 10)])
+                valid_writer.add_summary(acc_valid_summary, i)
 
+                avg_loss_summary = tf.Summary(
+                        value=[tf.Summary.Value(tag="avg_train_loss", simple_value=avg_train_loss / 10)])
+                train_writer.add_summary(avg_loss_summary, i)
 
+                print ('The average Train accuracy after Epoch:' + str(i) + ' is:' + str(avg_train_accuracy / 10))
+                print ('The average Valid accuracy after Epoch:' + str(i) + ' is:' + str(avg_valid_accuracy / 10))
+                print ('The average Loss after Epoch:' + str(i) + ' is:' + str(avg_train_loss / 10))
 
 
     def do_inference(self,test_batch_directory,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,batch_size,checkpoint_dir,label_count,data_format="channels_last"):

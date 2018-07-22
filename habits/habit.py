@@ -41,32 +41,32 @@ def main():
 
     batch_size = 250
 
-    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/audio/'
+    '''
+    train_directory = '/home/ubuntu/Desktop/urbansound_data/audio/'
     #validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
     test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/'
     checkpoint_base_dir = '/home/nitin/Desktop/aws_habits/FMSG_Habits/checkpoints/base_dir/'
     label_meta_file_path = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
-
-
     '''
-    train_directory = '/home/ubuntu/Desktop/urbansound_data/train/'
+
+
+    train_directory = '/home/ubuntu/Desktop/urbansound_data/audio/'
     validate_directory = '/home/ubuntu/Desktop/urbansound_data/valid/'
     test_directory = '/home/ubuntu/Desktop/urbansound_data/test/'
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
-    '''
 
-    train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
-    valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
-    #train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
-    #valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
+    #train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
+    #valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
+
+    train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+    valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
 
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256
-    regenerate_training_inputs = True
-    regenerate_test_inputs = True
+    regenerate_training_inputs = False
     cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True
