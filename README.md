@@ -37,11 +37,7 @@ This is the best test accuracy reported using a standard train-dev-test split.
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
 
 **3. Validation Accuracy: 77.26%**
-![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br />
-
-**Training Loss Over Time** 
-![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/loss_resnet_urbansound8k.PNG) <br /> <br/>
-
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br /> <br />
 
 **GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
 
