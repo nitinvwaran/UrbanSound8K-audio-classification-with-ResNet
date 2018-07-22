@@ -6,7 +6,7 @@ This project aims to classify the environmental sounds from the UrbanSound8K dat
 The creators of the dataset strongly recommend using the pre-prepared 10-folds they made. Two approaches were hence used in this project and both are reported:
 <br/> <br/>
 **APPROACH 1:** <br/>
-10-fold Cross Validation, using all data in each fold for training and validation.  <br />
+This is the dataset creator's recommended approach: 10-fold Cross Validation, using all data in each fold for training and validation.  <br />
 The average of the validation accuracy, training accuracy, and training loss across 10-folds is taken at the end of each epoch. <br />
 The per-fold validation accuracy, training accuracy, and training loss are also reported. <br/>
 No test accuracy is reported as no test data is available.
