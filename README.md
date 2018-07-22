@@ -4,8 +4,8 @@ This project aims to classify the environmental sounds from the UrbanSound8K dat
 
 **UPDATE** <br/>
 The creators of the dataset strongly recommend using the pre-prepared 10-folds they made. Two approaches were hence used in this project and both are reported:
-<br/>
-APPROACH 1: <br/>
+<br/> <br/>
+**APPROACH 1:** <br/>
 10-fold Cross Validation, using all data in each fold for training and validation. The average of the validation accuracy, training accuracy, and training loss across 10-folds is taken at the end of each epoch. The per-fold validation accuracy, training accuracy, and training loss are also reported. <br/>
 No test accuracy is reported as no test data is available.
 
@@ -14,27 +14,40 @@ The **training accuracy** reaches 100% within 51 folds. <br />
 The **average training accuracy** reaches 100% within 5 epochs. <br />
 The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 
-**Validation-accuracy per-fold**
+**1. Validation-accuracy per-fold**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_valid_fold.PNG)
 
+<br/>
+<br />
 
+**2. Average Vaildation accuracy per epoch**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/avg_valid_accuracy.PNG)
+<br/> <br/>
 
-APPROACH 2: <br/>
+**APPROACH 2:** <br/>
 This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
 < br/>
 
 The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
 
-**Test Accuracy: 77.61%** <br />
+**1. Test Accuracy: 77.61%** <br />
+This is the best test accuracy reported using a standard train-dev-test split. 
+<br/>
 
 
-**Training Accuracy: 100%!**
+**2. Training Accuracy: 100%!**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
 
-**Validation Accuracy: 77.26%**
+**3. Validation Accuracy: 77.26%**
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br />
 
 **Training Loss Over Time** 
-![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/loss_resnet_urbansound8k.PNG) <br />
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/loss_resnet_urbansound8k.PNG) <br /> <br/>
+
+
+
+**GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
+
 
 **UrbanSound 8K Dataset** <br />
 The UrbanSound8K dataset information can be found here: https://urbansounddataset.weebly.com/urbansound8k.html <br />
