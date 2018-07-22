@@ -65,8 +65,8 @@ def main():
     do_scratch_training = True
     number_cepstrums = 26
     nfft_value = 256
-    regenerate_training_inputs = False
-    regenerate_test_inputs = False
+    regenerate_training_inputs = True
+    regenerate_test_inputs = True
     cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True

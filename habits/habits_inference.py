@@ -1,67 +1,14 @@
-import os
 import numpy as np
-from habits.model import AudioEventDetectionResnet as aed
+from habits.model import AudioEventDetectionResnet
 import pandas as pd
-import tensorflow as tf
 
+def invoke_inference(test_batch_directory,ncep,nfft,cutoff_mfcc, cutoff_spectogram,use_nfft,
+                     batch_size,checkpoint_dir,label_count):
 
-def invoke_inference(test_batch_directory,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,batch_size,checkpoint_dir,label_count,data_format="channels_last"):
-
-    test_count = 0
-
-    # Read the count from the file
-    if (os.path.exists(test_batch_directory)):
-        with open(test_batch_directory + 'test_count.txt', 'r') as rf:
-            for line in rf.readlines():
-                test_count = int(line)
-
-    os.chdir(test_batch_directory)
-    print('The Test Directory is:' + str(test_batch_directory))
-
-    with tf.Graph().as_default() as grap:
-        logits, fingerprint_input, is_training = aed.build_graph(use_nfft = use_nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc = cutoff_mfcc,nfft = nfft,ncep = ncep,num_labels=label_count,data_format=data_format)
-
-    with tf.Session(graph=grap) as sess:
-
-        checkpoint_file_path = checkpoint_dir + 'urbansound8k_with_resnet.ckpt'
-
-        print('Checkpoint File is:' + checkpoint_file_path)
-        print('Loading Checkpoint File Path')
-
-        saver = tf.train.Saver()
-        saver.restore(sess, checkpoint_file_path)
-
-        j = batch_size
-
-        with open (test_batch_directory + 'ytest.txt','w') as predfile:
-
-            predfile.write('Actual,Prediction' + '\n')
-
-            while (j <= test_count):
-
-                print ('The batch is:' + str(j))
-
-                inputs = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(j) + '.npy')
-                labels = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(j) + '.npy')
-
-                predictions = sess.run(logits,
-                                       feed_dict={
-                                           fingerprint_input: inputs,
-                                           is_training: False
-                })
-
-                soft = tf.nn.softmax(predictions,name="softmax_preds")
-
-                pred_indexes = tf.argmax(soft,axis=1).eval(session=sess)
-
-                print ('Shapes of predictions and labels:' + str(labels.shape) + ' ' + str(len(pred_indexes)))
-                output = np.vstack((labels,pred_indexes))
-                t_out = np.asarray(np.transpose(output))
-
-                print ('Sample np array:' + t_out[:100])
-
-                for x in range(0,t_out.shape[0]):
-                    predfile.write(t_out[x][0] + t_out[x][1] + '\n')
+    aed = AudioEventDetectionResnet()
+    aed.do_inference(test_batch_directory=test_batch_directory,ncep=ncep,nfft=nfft,cutoff_mfcc=cutoff_mfcc,
+                     cutoff_spectogram=cutoff_spectogram,use_nfft=use_nfft,batch_size=batch_size,
+                     checkpoint_dir=checkpoint_dir,label_count=label_count)
 
 
 def accuracy(y_file):
@@ -76,18 +23,14 @@ def accuracy(y_file):
     print('The test accuracy is:' + str(float(total_pred / yfile.shape[0])))
 
 
-
-
-
-
 def main():
 
     batch_size = 250  # Could change for batch inference
-    test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/batch_label_count_10/'
-    checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
-    label_meta_file_path = '/home/nitin/Desktop/tensorflow_speech_dataset/labels_meta/labels_meta.txt'
+    test_directory = '/home/ubuntu/Desktop/urbansound_data/test/batch_label_count_10/'
+    checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
+    #label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
     number_cepstrums = 26
-    nfft_value = 256  # Note that the FFT reduces this to n/2 + 1 as the column dimension in the spectogram matrix
+    nfft_value = 256
     cutoff_spectogram = 75
     cutoff_mfcc = 150
     use_nfft = True
