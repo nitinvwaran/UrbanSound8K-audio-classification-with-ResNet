@@ -130,26 +130,28 @@ def run_validations(label_meta_file_path,do_scratch_training, train_directory, v
 def main():
 
     batch_size = 250
-    '''
-    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train/'
-    validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid/'
-    test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/test/'
-    checkpoint_base_dir = '/home/nitin/Desktop/aws_habits/FMSG_Habits/checkpoints/base_dir/'
-    label_meta_file_path = '/home/nitin/Desktop/aws_habits/FMSG_Habits/habits/labels_meta/labels_meta.txt'
-    '''
 
 
+    train_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/train/'
+    validate_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/valid/'
+    test_directory = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/test/'
+    checkpoint_base_dir = '/home/nitin/PycharmProjects/habits/checkpoints/'
+    label_meta_file_path = '/home/nitin/PycharmProjects/habits/habits/labels_meta/labels_meta.txt'
+
+
+    '''
     train_directory = '/home/ubuntu/Desktop/urbansound_data/train/'
     validate_directory = '/home/ubuntu/Desktop/urbansound_data/valid/'
     test_directory = '/home/ubuntu/Desktop/urbansound_data/test/'
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
+    '''
 
-    #train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
-    #valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
+    train_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/train_tensorboard/'
+    valid_tensorboard_dir = '/home/nitin/Desktop/sdb1/all_files/tensorflow_voice/UrbanSound8K/valid_tensorboard/'
 
-    train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
-    valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
+    #train_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/train_tensorboard/'
+    #valid_tensorboard_dir = '/home/ubuntu/Desktop/urbansound_data/valid_tensorbaord/'
 
     do_scratch_training = True
     number_cepstrums = 26
