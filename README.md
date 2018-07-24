@@ -1,4 +1,4 @@
-# UrbanSound8K Audio Classification with ResNet-18
+# UrbanSound8K Audio Classification and Single-Word Voice Classification with ResNet-18
 
 This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. <br />
 
