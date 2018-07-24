@@ -1,8 +1,7 @@
 import tensorflow as tf
 import os, shutil
 import numpy as np
-import numpy
-numpy.set_printoptions(threshold=numpy.nan)
+np.set_printoptions(threshold=np.nan)
 
 class ModelHelper():
 
@@ -19,12 +18,14 @@ class AudioEventDetectionResnet(object):
 
     def build_loss_optimizer(self, logits, num_labels):
 
-        # Create the back propagation and training evaluation machinery in the graph.
+
         with tf.name_scope('cross_entropy'):
-            # Define loss and optimizer
+
+            # This is the labels tagged to the dataset
             ground_truth_input = tf.placeholder(
                 tf.int64, [None], name='groundtruth_input')
 
+            # Categorical cross-entropy loss
             cross_entropy_mean = tf.losses.sparse_softmax_cross_entropy(
                 labels=ground_truth_input, logits=logits)
             learning_rate_input = tf.placeholder(
@@ -37,6 +38,7 @@ class AudioEventDetectionResnet(object):
                 train_step = tf.train.AdamOptimizer(
                     learning_rate_input).minimize(loss)
 
+            # Construct the confusion matrix
             predicted_indices = tf.argmax(logits, 1, name="predicted_indices")
             correct_prediction = tf.equal(predicted_indices, ground_truth_input, name='correct_prediction')
             confusion_matrix = tf.confusion_matrix(
@@ -49,6 +51,28 @@ class AudioEventDetectionResnet(object):
     def base_train(self, train_folder, validate_folder, n_train, n_valid, learning_rate, ncep, nfft, label_count, batch_size,
                    epochs, chkpoint_dir, use_nfft, cutoff_spectogram, cutoff_mfcc,data_format, train_tensorboard_dir, valid_tensorboard_dir):
 
+        """
+        :param train_folder: folder containing all the training datapoints
+        :param validate_folder: folder containing all validation datapoints
+        :param n_train: # of train datapoints
+        :param n_valid: # of validation datapoints
+        :param learning_rate: learning rate used by the optimizer
+        :param ncep: number cepstrums used to calculate the mfcc
+        :param nfft: number of frequency bins for the fast fourier transform
+        :param label_count: number of labels
+        :param batch_size: batch size
+        :param epochs: number of epochs for training
+        :param chkpoint_dir: location to store checkpoints
+        :param use_nfft: whether to use the raw spectogram (True) or the mfcc (False). The code currently uses mel-filtered spectogram, however
+        :param cutoff_spectogram: cutoff of number of time frames to use for spectogram input (raw or mel-filtered)
+        :param cutoff_mfcc: cutoff for number of time frames to use for mfcc input
+        :param data_format: 'channels_last' or 'channels_first' for the convolution operation.
+        :param train_tensorboard_dir: directory to store training tensorboard
+        :param valid_tensorboard_dir: directory to store validation tensorboard
+        :return:
+        """
+
+        # Build the graph
         with tf.Graph().as_default() as grap:
             logits, fingerprint_input,is_training \
                 = self.build_graph(use_nfft = use_nfft,cutoff_spectogram=cutoff_spectogram,cutoff_mfcc=cutoff_mfcc,nfft=nfft,
@@ -56,16 +80,20 @@ class AudioEventDetectionResnet(object):
 
             ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean,loss \
                 = self.build_loss_optimizer(logits,label_count)
+
+
+        # Build the session with the graph
         with tf.Session(graph=grap) as sess:
             # For checkpoints
             saver = tf.train.Saver()
             init = tf.global_variables_initializer()
             sess.run(init)
 
+
+            # Tensorboard init
             if (os.path.exists(train_tensorboard_dir)):
                 shutil.rmtree(train_tensorboard_dir)
             os.mkdir(train_tensorboard_dir)
-
             if (os.path.exists(valid_tensorboard_dir)):
                 shutil.rmtree(valid_tensorboard_dir)
             os.mkdir(valid_tensorboard_dir)
@@ -87,10 +115,12 @@ class AudioEventDetectionResnet(object):
                 j = batch_size
 
                 '''''''''''''''''''''''''''''
-                   'Full batch gradient descent'
-                   '''''''''''''''''''''''''''''
+                'Full batch gradient descent'
+                '''''''''''''''''''''''''''''
 
                 while (j <= n_train):
+
+                    # Load the input matrices and label vectors
                     npInputs = np.load(
                         train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch' + '_' + str(
                             j) + '.npy')
@@ -98,11 +128,8 @@ class AudioEventDetectionResnet(object):
                         train_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels' + '_' + str(
                             j) + '.npy')
 
-                    #print ('Shapes of inputs and labels')
-                    #print (npInputs.shape)
-                    #print (npLabels.shape)
-                    #print (npLabels[:50])
 
+                    # Put inputs through the graph
                     _, l, conf_matrix = sess.run(
                         [
                             train_step, loss, confusion_matrix,
@@ -112,15 +139,16 @@ class AudioEventDetectionResnet(object):
                             fingerprint_input: npInputs,
                             ground_truth_input: npLabels,
                             learning_rate_input: learning_rate,
-                            is_training: True
+                            is_training: True # True for batch normalization training
                         })
 
-
+                    # Add all the batches to the confusion matrix
                     if total_conf_matrix is None:
                         total_conf_matrix = conf_matrix
                     else:
                         total_conf_matrix += conf_matrix
 
+                    # Write loss to tensorflow for each batch
                     xent_train_summary = tf.Summary(
                         value=[tf.Summary.Value(tag="cross_entropy_sum", simple_value=l)])
                     xent_counter += 1
@@ -134,16 +162,17 @@ class AudioEventDetectionResnet(object):
                     else:
                         j = j + batch_size
 
-                'Training set reporting after every epoch'
+                #Training set reporting after every epoch
                 print('Training Confusion Matrix:' + '\n' + str(total_conf_matrix))
                 true_pos = np.sum(np.diag(total_conf_matrix))
                 all_pos = np.sum(total_conf_matrix)
                 print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
                 print ('Training data points:' + str(all_pos))
 
+
+                # Write training accuracy to tensorboard
                 acc_train_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_train_summary", simple_value=float(true_pos / all_pos))])
-
                 train_writer.add_summary(acc_train_summary, i)
 
                 # Save after every 10 epochs
@@ -152,6 +181,7 @@ class AudioEventDetectionResnet(object):
                     saver.save(sess=sess, save_path=chkpoint_dir + 'tensorflow_voice_with_resnet.ckpt',
                                global_step=i)
 
+                # Now run validation accuracy statistic after all training batches
                 v = batch_size
                 valid_conf_matrix = None
                 if (batch_size > n_valid):
@@ -165,10 +195,6 @@ class AudioEventDetectionResnet(object):
                     npValLabels = np.load(
                         validate_folder + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(
                             v) + '.npy')
-
-                    #print (npValInputs.shape)
-                    #print (npValLabels.shape)
-                    #print (npValLabels[:50])
 
                     _, conf_matrix = sess.run(
                         [evaluation_step, confusion_matrix],
@@ -191,19 +217,36 @@ class AudioEventDetectionResnet(object):
                     else:
                         v = v + batch_size
 
-                'Validation Set reporting after every epoch'
+                #Validation Set reporting after every epoch
                 print('Validation Confusion Matrix: ' + '\n' + str(valid_conf_matrix))
                 true_pos = np.sum(np.diag(valid_conf_matrix))
                 all_pos = np.sum(valid_conf_matrix)
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
                 print('Validation data points:' + str(all_pos))
 
+                # Write validation accuracy to validation tensorboard
                 acc_valid_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
                 valid_writer.add_summary(acc_valid_summary, i)
 
 
     def do_inference(self,test_batch_directory,ncep,nfft,cutoff_mfcc,cutoff_spectogram,use_nfft,batch_size,checkpoint_dir,label_count,data_format="channels_last"):
+
+        """
+
+        :param self:
+        :param test_batch_directory: directory storing all the test datapoints
+        :param ncep: number cepstrums for mfcc
+        :param nfft: number of frequency bins for fast fourier transform
+        :param cutoff_mfcc: cutoff number of time frames for mfcc matrix
+        :param cutoff_spectogram: cutoff number of time frames for raw or mel-filtered spectogram
+        :param use_nfft: use spectogram instead of mfcc if true (mel_filtered spectogram currently)
+        :param batch_size: the batch size
+        :param checkpoint_dir: location of checkpoints to be loaded
+        :param label_count: number of labels
+        :param data_format: 'channels_first' or 'channels_last' for the convolution operator
+        :return:
+        """
 
         test_count = 0
 
@@ -222,7 +265,7 @@ class AudioEventDetectionResnet(object):
 
         with tf.Session(graph=grap) as sess:
 
-            checkpoint_file_path = checkpoint_dir + 'tensorflow_voice_with_resnet.ckpt-30'
+            checkpoint_file_path = checkpoint_dir + 'tensorflow_voice_with_resnet.ckpt-30' # TODO:parameterize
 
             print('Checkpoint File is:' + checkpoint_file_path)
             print('Loading Checkpoint File Path')
@@ -238,8 +281,6 @@ class AudioEventDetectionResnet(object):
 
                 while (j <= test_count):
 
-                    #print ('The batch is:' + str(j))
-
                     inputs = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(j) + '.npy')
                     labels = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(j) + '.npy')
 
@@ -253,11 +294,8 @@ class AudioEventDetectionResnet(object):
 
                     pred_indexes = tf.argmax(soft,axis=1).eval(session=sess)
 
-                    #print ('Shapes of predictions and labels:' + str(labels.shape) + ' ' + str(len(pred_indexes)))
                     output = np.vstack((labels,pred_indexes))
                     t_out = np.asarray(np.transpose(output))
-
-                    #print ('Sample np array:' + str(t_out[:100]))
 
                     for x in range(0,t_out.shape[0]):
                         predfile.write(str(t_out[x][0]) + ',' +  str(t_out[x][1]) + '\n')
@@ -341,6 +379,10 @@ class AudioEventDetectionResnet(object):
 
 
     def build_graph(self,use_nfft,cutoff_spectogram,cutoff_mfcc,nfft,ncep,num_labels,data_format='channels_last'):
+
+        """
+        Builds the graph to use for training.Override this function to change the model.
+        """
 
         if (use_nfft):
             input_time_size = cutoff_spectogram
