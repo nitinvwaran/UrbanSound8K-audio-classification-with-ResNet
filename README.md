@@ -76,7 +76,7 @@ The following Data pre-processing steps were applied:
 2. Adam Optimizer is used with initial learning rate of 0.01.
 3. Categorical Cross-Entropy Loss is used with mean reduction.
 4. Full-batch-size is used for training and gradient descent, given the small dataset size. 
-5. Model is run through 100 epochs in APPROACH 2.
+5. Model is run through 100 epochs in APPROACH 1.
 <br />
 
 **Acknowledgements** <br />
