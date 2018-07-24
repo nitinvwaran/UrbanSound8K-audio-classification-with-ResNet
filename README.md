@@ -6,7 +6,26 @@ In addition, single-word vocal signals are also classified using the ResNet-18 a
 **UPDATE** <br/>
 The creators of the dataset strongly recommend using the pre-prepared 10-folds they made. Two approaches were hence used in this project and both are reported:
 <br/> <br/>
+
+
 **APPROACH 1:** <br/>
+This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
+
+The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
+
+**1. Test Accuracy: 77.61%** <br/>
+This is the best test accuracy reported using a standard train-dev-test split. 
+<br/>
+
+
+**2. Training Accuracy: 100%**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
+
+**3. Validation Accuracy: 77.26%**
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br /> <br />
+
+
+**APPROACH 2:** <br/>
 This is the dataset creator's recommended approach: 10-fold Cross Validation, using all data in each fold for training and validation.  <br />
 The average of the validation accuracy, training accuracy, and training loss across 10-folds is taken at the end of each epoch. <br />
 The per-fold validation accuracy, training accuracy, and training loss are also reported. <br/>
@@ -24,21 +43,6 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 ![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/avg_valid_accuracy.PNG)
 <br/> <br/>
 
-**APPROACH 2:** <br/>
-This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
-
-The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
-
-**1. Test Accuracy: 77.61%** <br/>
-This is the best test accuracy reported using a standard train-dev-test split. 
-<br/>
-
-
-**2. Training Accuracy: 100%**
-![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_18.PNG) <br />
-
-**3. Validation Accuracy: 77.26%**
-![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/accuracy_resnet_validation.PNG) <br /> <br />
 
 **GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
 
