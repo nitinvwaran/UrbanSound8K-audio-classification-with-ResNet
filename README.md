@@ -43,7 +43,7 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 
 **SPEECH COMMANDS DATASET** <br />
 
-1. **Test Accuracy is 87%** (~ 11,004 datapoints)
+1. **Test Accuracy is 87.10%** (~ 11,004 datapoints)
 This is the test accuracy on a sample of 11,004 voice files
 
 2. **Training Accuracy is 98.47%** (84,845  datapoints)
