@@ -59,7 +59,7 @@ This is the dataset released by Google Research, related to Keyword Spotting. Th
 **Residual Networks** <br />
 The ResNet-18 architecture is the residual network architecture with 18 layers. More information on Residual Networks can be found in the link to the paper:  ('Deep Residual Learning for Image Recognition': https://arxiv.org/abs/1512.03385). <br /> Residual Networks were initially used for Image Object Detection and Image Classification. 
 
-**ResNet-18 on UrbanSound8K** <br />
+**ResNet-18 on UrbanSound8K and Speech Commands Dataset** <br />
 Inspired by work from Google Research for Audio Classification ('CNN Architectures for Large Scale Audio Classification': https://ai.google/research/pubs/pub45611), this github project was born with the idea to use Residual Networks for Audio Classification of Environmental Sound data such as the UrbanSound8K. The ResNet-18 layer was selected, with the aim to create a smaller model that could be optimized and deployed for smaller devices such as Mobile Phone and Raspberry Pi. 
 
 The original ResNet building block is used (Convolution -> Batch Normalization -> ReLU -> Convolution -> Batch Normalization -> Shortcut Addition -> ReLU), as can be seen modeled in the below diagram <br /> (Source: Kaiming He et. al, 'Identity Mappings in Deep Residual Networks') <br />
