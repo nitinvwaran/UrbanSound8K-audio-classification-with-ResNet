@@ -3,7 +3,7 @@
 This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. <br />
 In addition, Google's Speech Command Dataset is also classified using the ResNet-18 architecture. <br />
 
-**URBANSOUND8K DATASET** <br /> <br />
+**URBANSOUND8K DATASET** <br /> 
 
 **APPROACH 1:** <br/>
 This is a standard train-dev-test split on all the 8732 datapoints from the dataset.  <br />
@@ -41,7 +41,7 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 <br/> <br/>
 
 
-**SPEECH COMMANDS DATASET**
+**SPEECH COMMANDS DATASET** <br />
 
 1. **Test Accuracy is 87%** (~ 11,004 datapoints)
 This is the test accuracy on a sample of 11,004 voice files
