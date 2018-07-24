@@ -51,6 +51,11 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 The UrbanSound8K dataset information can be found here: https://urbansounddataset.weebly.com/urbansound8k.html <br />
 This dataset contains 8732 labeled sound excerpts (<=4s) of urban sounds from 10 classes: air_conditioner, car_horn, children_playing, dog_bark, drilling, enginge_idling, gun_shot, jackhammer, siren, and street_music.
 
+**Speech Commands DataSet** <br />
+The Speech Commands Dataset contains just over 100K speech keywords in 35 labels. <br />
+This can be found in the link: https://storage.cloud.google.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz <br />
+This is the dataset released by Google Research, related to Keyword Spotting. The paper about the dataset is here: https://arxiv.org/pdf/1804.03209.pdf <br/> 
+
 **Residual Networks** <br />
 The ResNet-18 architecture is the residual network architecture with 18 layers. More information on Residual Networks can be found in the link to the paper:  ('Deep Residual Learning for Image Recognition': https://arxiv.org/abs/1512.03385). <br /> Residual Networks were initially used for Image Object Detection and Image Classification. 
 
