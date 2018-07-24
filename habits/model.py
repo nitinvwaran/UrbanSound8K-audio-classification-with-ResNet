@@ -1,6 +1,8 @@
 import tensorflow as tf
 import os, shutil
 import numpy as np
+import numpy
+numpy.set_printoptions(threshold=numpy.nan)
 
 class ModelHelper():
 
@@ -54,7 +56,6 @@ class AudioEventDetectionResnet(object):
 
             ground_truth_input, learning_rate_input, train_step, confusion_matrix, evaluation_step, cross_entropy_mean,loss \
                 = self.build_loss_optimizer(logits,label_count)
-
         with tf.Session(graph=grap) as sess:
             # For checkpoints
             saver = tf.train.Saver()
@@ -100,7 +101,7 @@ class AudioEventDetectionResnet(object):
                     #print ('Shapes of inputs and labels')
                     #print (npInputs.shape)
                     #print (npLabels.shape)
-                    #print (npLabels[0][:10])
+                    #print (npLabels[:50])
 
                     _, l, conf_matrix = sess.run(
                         [
@@ -138,6 +139,7 @@ class AudioEventDetectionResnet(object):
                 true_pos = np.sum(np.diag(total_conf_matrix))
                 all_pos = np.sum(total_conf_matrix)
                 print('Training Accuracy is: ' + str(float(true_pos / all_pos)))
+                print ('Training data points:' + str(all_pos))
 
                 acc_train_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_train_summary", simple_value=float(true_pos / all_pos))])
@@ -147,7 +149,7 @@ class AudioEventDetectionResnet(object):
                 # Save after every 10 epochs
                 if (i % 10 == 0):
                     print('Saving checkpoint for epoch:' + str(i))
-                    saver.save(sess=sess, save_path=chkpoint_dir + 'urbansound8k_with_resnet.ckpt',
+                    saver.save(sess=sess, save_path=chkpoint_dir + 'tensorflow_voice_with_resnet.ckpt',
                                global_step=i)
 
                 v = batch_size
@@ -166,7 +168,7 @@ class AudioEventDetectionResnet(object):
 
                     #print (npValInputs.shape)
                     #print (npValLabels.shape)
-                    #print (npValLabels[:10])
+                    #print (npValLabels[:50])
 
                     _, conf_matrix = sess.run(
                         [evaluation_step, confusion_matrix],
@@ -194,6 +196,7 @@ class AudioEventDetectionResnet(object):
                 true_pos = np.sum(np.diag(valid_conf_matrix))
                 all_pos = np.sum(valid_conf_matrix)
                 print(' Validation Accuracy is: ' + str(float(true_pos / all_pos)))
+                print('Validation data points:' + str(all_pos))
 
                 acc_valid_summary = tf.Summary(
                     value=[tf.Summary.Value(tag="acc_valid_summary", simple_value=float(true_pos / all_pos))])
@@ -219,7 +222,7 @@ class AudioEventDetectionResnet(object):
 
         with tf.Session(graph=grap) as sess:
 
-            checkpoint_file_path = checkpoint_dir + 'urbansound8k_with_resnet.ckpt-60'
+            checkpoint_file_path = checkpoint_dir + 'tensorflow_voice_with_resnet.ckpt-30'
 
             print('Checkpoint File is:' + checkpoint_file_path)
             print('Loading Checkpoint File Path')
@@ -235,7 +238,7 @@ class AudioEventDetectionResnet(object):
 
                 while (j <= test_count):
 
-                    print ('The batch is:' + str(j))
+                    #print ('The batch is:' + str(j))
 
                     inputs = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_' + str(j) + '.npy')
                     labels = np.load(test_batch_directory + 'models_label_count_' + str(label_count) + '_numpy_batch_labels_' + str(j) + '.npy')
@@ -250,7 +253,7 @@ class AudioEventDetectionResnet(object):
 
                     pred_indexes = tf.argmax(soft,axis=1).eval(session=sess)
 
-                    print ('Shapes of predictions and labels:' + str(labels.shape) + ' ' + str(len(pred_indexes)))
+                    #print ('Shapes of predictions and labels:' + str(labels.shape) + ' ' + str(len(pred_indexes)))
                     output = np.vstack((labels,pred_indexes))
                     t_out = np.asarray(np.transpose(output))
 

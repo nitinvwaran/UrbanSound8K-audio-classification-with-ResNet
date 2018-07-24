@@ -140,6 +140,8 @@ class InputRaw(object):
             inputs.append(input_raw)
 
             l = common_helpers.stamp_label(num_labels= label_count,labels_meta=labels_meta,filename=file)
+
+            #print ('Label is:' + str(l))
             labels.append(l)
 
             i = i + 1

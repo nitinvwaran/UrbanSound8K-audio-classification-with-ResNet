@@ -20,13 +20,16 @@ def accuracy(y_file):
     arraycheck = np.equal(yfileActual, yfilePred)
     total_pred = np.sum(arraycheck)
 
+    print ('Total Test Datapoints:'+ str(yfile.shape[0]))
+    print ('Total accurate:' + str(total_pred))
+
     print('The test accuracy is:' + str(float(total_pred / yfile.shape[0])))
 
 
 def main():
 
     batch_size = 250  # Could change for batch inference
-    test_directory = '/home/ubuntu/Desktop/urbansound_data/test/batch_label_count_10/'
+    test_directory = '/home/ubuntu/Desktop/tensorflow_data-V2/tensorflow_voice_v2/test_v2/batch_label_count_35/'
     checkpoint_base_dir = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/checkpoints/'
     #label_meta_file_path = '/home/ubuntu/Desktop/UrbanSound8K/UrbanSound8K-audio-classification-with-ResNet/habits/labels_meta/labels_meta.txt'
     number_cepstrums = 26
@@ -37,7 +40,7 @@ def main():
 
     invoke_inference(test_batch_directory=test_directory,ncep=number_cepstrums,nfft=nfft_value,cutoff_mfcc=cutoff_mfcc,
                               cutoff_spectogram=cutoff_spectogram,use_nfft=use_nfft,batch_size=batch_size,checkpoint_dir=checkpoint_base_dir,
-                              label_count=10)
+                              label_count=35)
 
     accuracy(test_directory + 'ytest.txt')
 
