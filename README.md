@@ -3,10 +3,7 @@
 This project aims to classify the environmental sounds from the UrbanSound8K dataset, using a ResNet-18 architecture. <br />
 In addition, single-word vocal signals are also classified using the ResNet-18 architecture. <br />
 
-**UPDATE** <br/>
-The creators of the dataset strongly recommend using the pre-prepared 10-folds they made. Two approaches were hence used in this project and both are reported:
-<br/> <br/>
-
+**URBANSOUND8K DATASET** <br /> <br />
 
 **APPROACH 1:** <br/>
 This is a standard train-dev-test split on all the 8732 datapoints from the dataset.  <br />
@@ -44,8 +41,21 @@ The **average validation accuracy** reaches 99.78% after 9 epochs <br />
 <br/> <br/>
 
 
-**GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
+**SPEECH COMMANDS DATASET**
 
+1. **Test Accuracy is 87%** (~ 11,004 datapoints)
+This is the test accuracy on a sample of 11,004 voice files
+
+2. **Training Accuracy is 98.47%** (84,845  datapoints)
+This is the training accuracy after 30 epochs
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/train_accuracy_30_epochs.PNG)
+
+3. **Validation Accuracy is 90.17%** (9,980 datapoints)
+This is the validation accuracy after 30 epochs
+![alt text](https://github.com/nitinvwaran/UrbanSound8K-audio-classification-with-ResNet/blob/master/misc/valid_accuracy_30_epochs.PNG)
+
+
+**GENERAL COMMENTS ABOUT DATA PREPARATION. MODELING, AND ACKNOWLEDGEMENTS** <br/>
 
 **UrbanSound 8K Dataset** <br />
 The UrbanSound8K dataset information can be found here: https://urbansounddataset.weebly.com/urbansound8k.html <br />
