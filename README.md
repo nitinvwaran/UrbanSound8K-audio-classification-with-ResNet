@@ -9,7 +9,7 @@ The creators of the dataset strongly recommend using the pre-prepared 10-folds t
 
 
 **APPROACH 1:** <br/>
-This is a standard train-dev-test split on all the 8732 datapoints from the dataset. However, the authors strongly recommend against this approach, instead suggesting to use their pre-prepared 10-fold cross-validation dataset.  <br />
+This is a standard train-dev-test split on all the 8732 datapoints from the dataset.  <br />
 
 The test, validation, and train accuracies from the approach are reported below. Data is split into train-dev-test split of roughly 60-20-20 <br/> <br />
 
